@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>CT 영상분석 시뮬레이터 v17.9</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700;800&family=Inter:wght@400;600;700;900&display=swap');
+        
+        :root {
+            --bg-main: #f8fafc;
+            --cell-size: clamp(38px, 9vw, 50px);
+            --grid-gap: 8px;
+        }
+
+        html, body {
+            height: 100dvh; margin: 0; padding: 0; overflow: hidden;
+            background-color: var(--bg-main);
+            touch-action: none;
+            color: #0f172a; font-family: 'Inter', sans-serif;
+        }
+
+        .app-header {
+            position: fixed; top: 0; left: 0; right: 0; height: 56px;
+            padding: 0 16px; background: rgba(255,255,255,0.98); 
+            backdrop-filter: blur(10px); border-bottom: 2px solid #e2e8f0;
+            display: flex; justify-content: space-between; align-items: center; z-index: 2000;
+        }
+
+        .control-tower {
+            position: fixed; top: 72px; left: 12px; 
+            display: flex; flex-direction: column; gap: 10px; z-index: 2000;
+        }
+
+        .control-btn {
+            width: 52px; height: 52px; border-radius: 14px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: white; border: 2px solid #e2e8f0;
+            box-shadow: 0 4px 0px #e2e8f0;
+            transition: all 0.1s; cursor: pointer;
+        }
+        .control-btn:active { transform: translateY(2px); box-shadow: 0 1px 0px #e2e8f0; }
+        .control-btn.primary { background: #2563eb; border-color: #1d4ed8; color: white; box-shadow: 0 4px 0px #1d4ed8; }
+        .control-btn.next-step { background: #0f172a; border-color: #000; color: white; height: 64px; box-shadow: 0 4px 0px #000; }
+        .control-btn.disabled { opacity: 0.3; filter: grayscale(1); pointer-events: none; }
+        .control-btn span { font-size: 8px; font-weight: 800; margin-top: 2px; text-transform: uppercase; }
+
+        .main-body { 
+            height: 100dvh; width: 100vw; position: relative; overflow: hidden;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        #interaction-layer {
+            position: absolute; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            transform-origin: center center; will-change: transform;
+        }
+
+        .grid-container {
+            display: grid; grid-template-columns: repeat(4, var(--cell-size));
+            grid-template-rows: repeat(4, var(--cell-size));
+            gap: var(--grid-gap); padding: 14px; background: #fff; border-radius: 20px;
+            border: 2px solid #e2e8f0; box-shadow: 0 15px 30px -5px rgba(0,0,0,0.08);
+        }
+        .grid-container.waiting { opacity: 0.5; }
+
+        .data-cell { 
+            background: #f8fafc; border-radius: 10px; display: flex; align-items: center; 
+            justify-content: center; border: 1.5px solid #e2e8f0; width: var(--cell-size); height: var(--cell-size);
+        }
+        
+        .data-cell input {
+            width: 100%; height: 100%; background: transparent; text-align: center; 
+            font-size: 22px; font-weight: 800; color: #1e293b; outline: none; border: none; font-family: 'JetBrains Mono';
+        }
+
+        /* Scan Line Styles with Animations */
+        .theme-0 { --theme-color: #0ea5e9; }
+        .theme-45 { --theme-color: #ec4899; }
+        .theme-90 { --theme-color: #10b981; }
+        .theme-135 { --theme-color: #f59e0b; }
+
+        .scan-line {
+            stroke: var(--theme-color);
+            stroke-width: 1.5;
+            opacity: 0.12;
+            transition: stroke-width 1s ease-out, opacity 1s ease-out;
+            stroke-linecap: round;
+        }
+
+        .scan-line.newly-active {
+            stroke-width: 6;
+            opacity: 0.8;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: beamDraw 0.6s ease-out forwards;
+        }
+
+        @keyframes beamDraw {
+            to { stroke-dashoffset: 0; }
+        }
+
+        .sensor {
+            position: absolute; width: 42px; height: 42px; 
+            border-radius: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 500; transform: translate(-50%, -50%); border: 3px solid var(--theme-color);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+        }
+        .sensor.correct { background-color: var(--theme-color); box-shadow: 0 0 15px var(--theme-color); color: white; scale: 1.05; }
+        .sensor.wrong { background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.12); color: var(--theme-color); }
+        .sensor .t-val { font-size: 12px; font-weight: 900; line-height: 1; }
+        .sensor .c-val { font-size: 11px; font-weight: 800; width: 85%; text-align: center; margin-top: 2px; padding-top: 1px; border-top: 1.5px solid currentColor; }
+
+        .guide-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+
+        .bottom-question {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px);
+            padding: 12px 24px; border-radius: 100px; border: 2px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); z-index: 1500;
+            pointer-events: none; text-align: center;
+        }
+
+        #report-overlay {
+            position: fixed; inset: 0; background: #ffffff; z-index: 3000;
+            display: none; flex-direction: column; overflow-y: auto; padding: 24px 16px;
+        }
+
+        .report-section-title {
+            font-size: 11px; font-weight: 900; color: #94a3b8; text-transform: uppercase;
+            letter-spacing: 0.1em; margin-bottom: 12px; display: block; border-bottom: 2px solid #f1f5f9; padding-bottom: 6px;
+        }
+
+        .step-compare-card {
+            background: #f8fafc; border-radius: 20px; padding: 18px; border: 1.5px solid #e2e8f0; margin-bottom: 16px;
+        }
+
+        /* Heatmap Styles */
+        .hm-0 { background-color: #f0fdf4; border-color: #22c55e; color: #166534; } 
+        .hm-1 { background-color: #fffbeb; border-color: #f59e0b; color: #92400e; }
+        .hm-2 { background-color: #fff7ed; border-color: #f97316; color: #9a3412; }
+        .hm-3 { background-color: #fef2f2; border-color: #ef4444; color: #991b1b; }
+
+        .theory-card { background: #f1f5f9; border-radius: 24px; padding: 24px; margin-top: 32px; }
+        .theory-item { margin-bottom: 20px; }
+        .theory-item h4 { font-weight: 900; color: #1e293b; font-size: 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .theory-item p { font-size: 13px; color: #475569; line-height: 1.6; word-break: keep-all; }
+        .theory-item .relation { font-size: 12px; font-weight: 700; color: #2563eb; margin-top: 6px; display: block; }
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="flex flex-col">
+            <div class="flex items-center gap-2">
+                <h1 class="text-xs font-black italic text-slate-800 uppercase tracking-tighter">CT Simulator v17.9</h1>
+                <div class="h-3 w-[1px] bg-slate-300"></div>
+                <span class="text-[9px] font-bold text-slate-600 uppercase">© Kim HyunSeok</span>
+            </div>
+            <p class="text-[8px] font-bold text-blue-600 font-mono tracking-tight leading-none mt-0.5">
+                tragowl@onedu.jje.go.kr <span class="text-slate-400 ml-1">| Educational Edition</span>
+            </p>
+        </div>
+        <div class="flex gap-4 items-center">
+            <div class="flex flex-col items-end">
+                <span class="text-[8px] font-black text-slate-400 uppercase leading-none mb-1">Elapsed</span>
+                <span id="timer-val" class="text-sm font-black font-mono leading-none">00:00</span>
+            </div>
+            <div class="flex flex-col items-end">
+                <span class="text-[8px] font-black text-slate-400 uppercase leading-none mb-1">Accuracy</span>
+                <span id="error-val" class="text-sm font-black text-blue-600 leading-none">0%</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="control-tower">
+        <div id="btn-random" onclick="generateRandomData()" class="control-btn" title="새로운 환자 데이터">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+            <span>New</span>
+        </div>
+        <div id="btn-peek" class="control-btn disabled" title="정답 데이터 확인"
+            onmousedown="peekAnswer(true)" onmouseup="peekAnswer(false)" 
+            ontouchstart="peekAnswer(true)" ontouchend="peekAnswer(false)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>Peek</span>
+        </div>
+        <div id="btn-start" onclick="startScan()" class="control-btn primary disabled" title="CT 스캐닝 시작">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m12 19 7-7-7-7"/><path d="M5 12h14"/></svg>
+            <span>Start</span>
+        </div>
+        <div id="btn-next" onclick="nextStep()" class="control-btn next-step hidden" title="다음 측정 각도로 이동">
+            <span id="angle-icon-tag" class="text-[10px] font-black px-1.5 py-0.5 bg-white/20 rounded">0°</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="m9 18 6-6-6-6"/></svg>
+            <span>Next</span>
+        </div>
+    </div>
+
+    <div class="main-body" id="viewport">
+        <div id="interaction-layer">
+            <svg class="guide-svg" id="guide-layer"></svg>
+            <div id="sensor-layer" class="absolute inset-0 pointer-events-none"></div>
+            <div class="grid-wrapper">
+                <div class="grid-container waiting" id="grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-question">
+        <span class="text-xs font-black text-slate-800 tracking-tight">Q. 종양의 모양과 위치를 추정해보세요.</span>
+    </div>
+
+    <!-- Final Diagnosis Report Overlay -->
+    <div id="report-overlay">
+        <div class="max-w-xl mx-auto w-full pb-20">
+            <div class="text-center mb-10 mt-6">
+                <span class="text-[10px] font-black text-blue-500 tracking-[0.3em] uppercase">Final Analysis</span>
+                <h2 class="text-4xl font-black italic text-slate-900 tracking-tighter mt-1">DIAGNOSIS REPORT</h2>
+                <div id="final-accuracy" class="text-7xl font-black text-blue-600 mt-4">0%</div>
+                <div class="flex justify-center gap-6 mt-6">
+                    <div class="text-center">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase">Duration</p>
+                        <p id="final-time" class="text-sm font-black text-slate-700 font-mono">00:00</p>
+                    </div>
+                    <div class="h-8 w-[1px] bg-slate-200"></div>
+                    <div class="text-center">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase">Status</p>
+                        <p class="text-sm font-black text-slate-700 uppercase">Analysis Complete</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Heatmap View Section -->
+            <div class="bg-slate-50 rounded-3xl p-6 mb-10 border-2 border-slate-100">
+                <div class="flex justify-between items-end mb-4">
+                    <span class="report-section-title mb-0">Final Reconstruction Heatmap</span>
+                    <div class="flex gap-2">
+                        <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-green-500"></div><span class="text-[8px] font-bold text-slate-400">Match</span></div>
+                        <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-red-500"></div><span class="text-[8px] font-bold text-slate-400">Error</span></div>
+                    </div>
+                </div>
+                <div class="flex justify-between gap-4 items-center">
+                    <div class="flex-1 flex flex-col items-center">
+                        <span class="text-[9px] font-black text-slate-500 mb-3 uppercase">Actual Data</span>
+                        <div id="mini-target-grid" class="grid grid-cols-4 gap-2 w-full max-w-[160px]"></div>
+                    </div>
+                    <div class="w-8 flex justify-center opacity-20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></svg>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center">
+                        <span class="text-[9px] font-black text-blue-600 mb-3 uppercase">Your Result</span>
+                        <div id="mini-user-grid" class="grid grid-cols-4 gap-2 w-full max-w-[160px]"></div>
+                    </div>
+                </div>
+            </div>
+
+            <span class="report-section-title">Evolutionary Step Analysis</span>
+            <div id="history-container" class="space-y-6"></div>
+
+            <div class="theory-card shadow-inner">
+                <span class="report-section-title" style="color:#64748b; border-bottom-color: #cbd5e1;">CT Reconstruction Principles</span>
+                <div class="theory-item">
+                    <h4>
+                        <svg class="text-blue-500" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07L19.07 4.93"/></svg>
+                        1. CT의 다중 빔 스캔 구조 (Multi-beam)
+                    </h4>
+                    <p>실제 CT 장비는 X-선 발생 장치와 검출기(Sensor)가 한 쌍이 되어 움직이며 신체를 투과하는 X-선 다발의 감쇠량을 측정합니다.</p>
+                </div>
+                <div class="theory-item">
+                    <h4>
+                        <svg class="text-blue-500" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                        2. 회전하며 투과도 측정 (Rotation)
+                    </h4>
+                    <p>단면 정보를 정확히 얻기 위해 CT는 장치 전체가 신체 주위를 360도 회전하며 수많은 각도에서 데이터를 입체적으로 수집합니다.</p>
+                </div>
+                <div class="theory-item">
+                    <h4>
+                        <svg class="text-blue-500" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+                        3. 정보 종합 및 역투영 (Back-projection)
+                    </h4>
+                    <p> 각 각도에서 측정된 합산 데이터는, 해당 방향의 직선 경로를 따라 격자판 전체에 다시 분산(역투영)됩니다.
+이 과정을 여러 각도에 대해 반복하면, 서로 다른 방향의 정보가 중첩되는 영역이 형성되며,
+이러한 중첩이 강하게 나타나는 위치가 고밀도 구조(예: 종양)가 존재할 가능성이 높은 영역으로 해석됩니다. </p>
+                </div>
+            </div>
+
+            <div class="mt-8">
+                <button onclick="location.reload()" class="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-[0.98] transition-transform">Start New Diagnosis</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GRID_SIZE = 4;
+        let currentStep = 0;
+        let gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+        let targetData = null;
+        let timerInterval, startTime;
+        let stepHistory = [];
+
+        let scale = 1, posX = 0, posY = 0;
+        let touchMode = 'none', startDist = 0, startX = 0, startY = 0;
+
+        const interactionLayer = document.getElementById('interaction-layer');
+        const viewport = document.getElementById('viewport');
+
+        function updateTransform() {
+            interactionLayer.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+        }
+
+        viewport.addEventListener('touchstart', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.closest('.control-btn')) return;
+            if (e.touches.length === 1) {
+                touchMode = 'pan'; startX = e.touches[0].clientX - posX; startY = e.touches[0].clientY - posY;
+            } else if (e.touches.length === 2) {
+                touchMode = 'zoom'; startDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            }
+        });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (touchMode === 'none') return;
+            e.preventDefault();
+            if (touchMode === 'pan' && e.touches.length === 1) {
+                posX = e.touches[0].clientX - startX; posY = e.touches[0].clientY - startY;
+            } else if (touchMode === 'zoom' && e.touches.length === 2) {
+                const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                scale = Math.min(Math.max(0.5, scale * (dist / startDist)), 3);
+                startDist = dist;
+            }
+            updateTransform();
+        });
+
+        viewport.addEventListener('touchend', () => { touchMode = 'none'; });
+
+        function init() {
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+            for(let r=0; r<GRID_SIZE; r++) {
+                for(let c=0; c<GRID_SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'data-cell';
+                    const input = document.createElement('input');
+                    input.type = 'number'; input.id = `in-${r}-${c}`;
+                    input.inputMode = 'numeric';
+                    input.oninput = (e) => {
+                        gridData[r][c] = parseInt(e.target.value) || 0;
+                        renderUI(false); // Only update state, don't trigger "new" animation
+                        updateMetrics();
+                    };
+                    cell.appendChild(input);
+                    gridEl.appendChild(cell);
+                }
+            }
+        }
+
+        function generateRandomData() {
+            targetData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0).map(() => Math.floor(Math.random() * 4) + 1));
+            const centers = [[1,1], [1,2], [2,1], [2,2]];
+            const selectedIdx = [];
+            while(selectedIdx.length < 3) {
+                const r = Math.floor(Math.random() * 4);
+                if(!selectedIdx.includes(r)) selectedIdx.push(r);
+            }
+            selectedIdx.forEach(idx => {
+                const [r, c] = centers[idx];
+                targetData[r][c] = Math.floor(Math.random() * 3) + 7;
+            });
+            document.getElementById('grid').classList.remove('waiting');
+            for(let r=0; r<GRID_SIZE; r++) for(let c=0; c<GRID_SIZE; c++) {
+                const inp = document.getElementById(`in-${r}-${c}`);
+                inp.value = ""; inp.placeholder = "?"; gridData[r][c] = 0;
+            }
+            document.getElementById('btn-peek').classList.remove('disabled');
+            document.getElementById('btn-start').classList.remove('disabled');
+        }
+
+        function peekAnswer(show) {
+            if (!targetData) return;
+            for(let r=0; r<GRID_SIZE; r++) for(let c=0; c<GRID_SIZE; c++) {
+                const input = document.getElementById(`in-${r}-${c}`);
+                if (show) { input.dataset.oldVal = input.value; input.value = targetData[r][c]; input.style.color = '#2563eb'; }
+                else { input.value = input.dataset.oldVal || ''; input.style.color = '#1e293b'; }
+            }
+        }
+
+        function startScan() {
+            currentStep = 1;
+            document.getElementById('btn-random').classList.add('hidden');
+            document.getElementById('btn-start').classList.add('hidden');
+            document.getElementById('btn-next').classList.remove('hidden');
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('timer-val').innerText = `${Math.floor(elapsed/60).toString().padStart(2,'0')}:${(elapsed%60).toString().padStart(2,'0')}`;
+            }, 1000);
+            renderUI(true);
+        }
+
+        function nextStep() {
+            const m = calculateMetrics(gridData);
+            stepHistory.push({ 
+                angle: ["0°", "45°", "90°", "135°"][currentStep-1], 
+                accuracy: m.accuracy, 
+                data: gridData.map(r => [...r]) 
+            });
+            if(currentStep < 4) { currentStep++; renderUI(true); } else { showFinalReport(); }
+        }
+
+        function getPathIndices(a) {
+            if(a===0) return [[{r:3,c:0},{r:0,c:0}],[{r:3,c:1},{r:0,c:1}],[{r:3,c:2},{r:0,c:2}],[{r:3,c:3},{r:0,c:3}]];
+            if(a===90) return [[{r:0,c:0},{r:0,c:3}],[{r:1,c:0},{r:1,c:3}],[{r:2,c:0},{r:2,c:3}],[{r:3,c:0},{r:3,c:3}]];
+            if(a===45) return [[{r:1,c:0},{r:0,c:1}],[{r:2,c:0},{r:1,c:1},{r:0,c:2}],[{r:3,c:1},{r:2,c:2},{r:1,c:3}],[{r:3,c:2},{r:2,c:3}]];
+            if(a===135) return [[{r:2,c:0},{r:3,c:1}],[{r:1,c:0},{r:2,c:1},{r:3,c:2}],[{r:0,c:1},{r:1,c:2},{r:2,c:3}],[{r:0,c:2},{r:1,c:3}]];
+            return [];
+        }
+
+        function getProj(d) {
+            const p = { d0: [0,0,0,0], d45: [0,0,0,0], d90: [0,0,0,0], d135: [0,0,0,0] };
+            if(!d) return p;
+            for(let r=0; r<4; r++) for(let c=0; c<4; c++) {
+                const v = parseInt(d[r][c]) || 0;
+                p.d0[c]+=v; p.d90[r]+=v;
+            }
+            p.d45[0] = (parseInt(d[1][0])||0) + (parseInt(d[0][1])||0);
+            p.d45[1] = (parseInt(d[2][0])||0) + (parseInt(d[1][1])||0) + (parseInt(d[0][2])||0);
+            p.d45[2] = (parseInt(d[3][1])||0) + (parseInt(d[2][2])||0) + (parseInt(d[1][3])||0);
+            p.d45[3] = (parseInt(d[3][2])||0) + (parseInt(d[2][3])||0);
+            p.d135[0] = (parseInt(d[2][0])||0) + (parseInt(d[3][1])||0);
+            p.d135[1] = (parseInt(d[1][0])||0) + (parseInt(d[2][1])||0) + (parseInt(d[3][2])||0);
+            p.d135[2] = (parseInt(d[0][1])||0) + (parseInt(d[1][2])||0) + (parseInt(d[2][3])||0);
+            p.d135[3] = (parseInt(d[0][2])||0) + (parseInt(d[1][3])||0);
+            return p;
+        }
+
+        function renderUI(isNewStep) {
+            const sLayer = document.getElementById('sensor-layer'), gLayer = document.getElementById('guide-layer');
+            sLayer.innerHTML = ''; 
+            
+            // We only recreate guide layer if it's a new step to prevent animation restart on every input
+            if(isNewStep) gLayer.innerHTML = '';
+            
+            if (currentStep === 0) return;
+            const viewRect = interactionLayer.getBoundingClientRect();
+            document.getElementById('angle-icon-tag').innerText = ["0°", "45°", "90°", "135°"][currentStep-1];
+            
+            const projections = getProj(gridData), targets = getProj(targetData);
+            const getPos = (r, c) => {
+                const el = document.getElementById(`in-${r}-${c}`).parentElement;
+                const rct = el.getBoundingClientRect();
+                return { 
+                    x: (rct.left - viewRect.left) / scale + (rct.width/2) / scale, 
+                    y: (rct.top - viewRect.top) / scale + (rct.height/2) / scale 
+                };
+            };
+
+            for(let s = 1; s <= currentStep; s++) {
+                let angle = [0, 45, 90, 135][s-1];
+                let theme = ['theme-0','theme-45','theme-90','theme-135'][s-1];
+                let proj = [projections.d0, projections.d45, projections.d90, projections.d135][s-1];
+                let targ = [targets.d0, targets.d45, targets.d90, targets.d135][s-1];
+                let paths = getPathIndices(angle);
+
+                paths.forEach((path, i) => {
+                    const pStart = getPos(path[0].r, path[0].c), pEnd = getPos(path[path.length-1].r, path[path.length-1].c);
+                    let rad = (angle - 90) * (Math.PI / 180); if (angle === 0) rad = -Math.PI/2;
+                    let dx = Math.cos(rad), dy = Math.sin(rad);
+                    const ext = 160, sm = 32;
+                    const x1 = pStart.x - dx * ext, y1 = pStart.y - dy * ext;
+                    const x2 = pEnd.x + dx * ext, y2 = pEnd.y + dy * ext;
+
+                    // Guide Lines (Only recreated on isNewStep)
+                    if(isNewStep) {
+                        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                        line.setAttribute("x1", x1); line.setAttribute("y1", y1); line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+                        // Apply animation class ONLY to current active beams
+                        const isNewActive = (s === currentStep);
+                        line.setAttribute("class", `scan-line ${theme} ${isNewActive ? 'newly-active' : ''}`);
+                        
+                        // Handle transition back to dim state after animation
+                        if(isNewActive) {
+                            setTimeout(() => {
+                                line.classList.remove('newly-active');
+                            }, 1000);
+                        }
+                        gLayer.appendChild(line);
+                    }
+
+                    // Sensor Feedback
+                    const snsr = document.createElement('div');
+                    const isMatch = proj[i] === targ[i];
+                    snsr.className = `sensor ${theme} ${isMatch ? 'correct' : 'wrong'}`;
+                    snsr.style.left = `${x2 + dx * sm}px`; snsr.style.top = `${y2 + dy * sm}px`;
+                    snsr.innerHTML = `<span class="t-val">${targ[i]}</span><span class="c-val">${proj[i]}</span>`;
+                    
+                    // Delay sensor appearance slightly for effect
+                    if(isNewStep && s === currentStep) {
+                        snsr.style.opacity = '0';
+                        snsr.style.transform = 'translate(-50%, -50%) scale(0.5)';
+                        setTimeout(() => {
+                            snsr.style.opacity = '1';
+                            snsr.style.transform = 'translate(-50%, -50%) scale(1)';
+                        }, 400);
+                    }
+                    sLayer.appendChild(snsr);
+                });
+            }
+        }
+
+        function calculateMetrics(data) {
+            let err = 0, total = 0;
+            if(!targetData) return { accuracy: "0" };
+            for(let r=0; r<4; r++) for(let c=0; c<4; c++) {
+                err += Math.abs((data[r][c] || 0) - (targetData[r][c]));
+                total += targetData[r][c];
+            }
+            return { accuracy: Math.max(0, 100 - (err/total*100)).toFixed(1) };
+        }
+
+        function updateMetrics() {
+            if(!targetData) return;
+            document.getElementById('error-val').innerText = calculateMetrics(gridData).accuracy + "%";
+        }
+
+        function showFinalReport() {
+            clearInterval(timerInterval);
+            document.getElementById('final-accuracy').innerText = calculateMetrics(gridData).accuracy + "%";
+            document.getElementById('final-time').innerText = document.getElementById('timer-val').innerText;
+            
+            createSimpleGrid('mini-target-grid', targetData);
+            createHeatmapGrid('mini-user-grid', gridData);
+
+            const hCont = document.getElementById('history-container');
+            hCont.innerHTML = '';
+            stepHistory.forEach((s, idx) => {
+                const card = document.createElement('div');
+                card.className = 'step-compare-card';
+                const themeColor = ['#0ea5e9', '#ec4899', '#10b981', '#f59e0b'][idx];
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-6 rounded-full" style="background: ${themeColor}"></span>
+                            <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Step ${idx+1}: ${s.angle} Projection</span>
+                        </div>
+                        <span class="text-xs font-black px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-600">${s.accuracy}% Match</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <div class="flex-1 flex flex-col items-center">
+                            <span class="text-[8px] font-bold text-slate-400 mb-2 uppercase">Actual</span>
+                            <div class="grid grid-cols-4 gap-1.5 w-full" id="hist-target-${idx}"></div>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center">
+                            <span class="text-[8px] font-bold text-slate-400 mb-2 uppercase">Your Guess</span>
+                            <div class="grid grid-cols-4 gap-1.5 w-full" id="hist-user-${idx}"></div>
+                        </div>
+                    </div>
+                `;
+                hCont.appendChild(card);
+                createSimpleStepGrid(`hist-target-${idx}`, targetData, true);
+                createSimpleStepGrid(`hist-user-${idx}`, s.data, false);
+            });
+
+            document.getElementById('report-overlay').style.display = 'flex';
+        }
+
+        function createSimpleGrid(id, data) {
+            const cont = document.getElementById(id); cont.innerHTML = '';
+            for(let r=0; r<4; r++) for(let c=0; c<4; c++) {
+                const d = document.createElement('div');
+                d.className = 'aspect-square border border-slate-200 rounded-md flex items-center justify-center font-bold text-xs bg-slate-100 text-slate-600';
+                d.innerText = data[r][c] || 0;
+                cont.appendChild(d);
+            }
+        }
+
+        function createHeatmapGrid(id, data) {
+            const cont = document.getElementById(id); cont.innerHTML = '';
+            for(let r=0; r<4; r++) for(let c=0; c<4; c++) {
+                const d = document.createElement('div');
+                const val = data[r][c] || 0;
+                const tgt = targetData[r][c];
+                const diff = Math.abs(val - tgt);
+                let hmClass = diff === 0 ? 'hm-0' : (diff === 1 ? 'hm-1' : (diff === 2 ? 'hm-2' : 'hm-3'));
+                d.className = `aspect-square border-2 rounded-lg flex items-center justify-center font-black text-sm font-mono ${hmClass}`;
+                d.innerText = val;
+                cont.appendChild(d);
+            }
+        }
+
+        function createSimpleStepGrid(id, data, isTarget) {
+            const cont = document.getElementById(id); cont.innerHTML = '';
+            for(let r=0; r<4; r++) for(let c=0; c<4; c++) {
+                const d = document.createElement('div');
+                d.className = `aspect-square border rounded-md flex items-center justify-center font-black text-[10px] font-mono ${isTarget ? 'bg-slate-100 border-slate-200 text-slate-400' : 'bg-white border-slate-300 text-slate-700'}`;
+                d.innerText = data[r][c] || 0;
+                cont.appendChild(d);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

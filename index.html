@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>현석쌤의 친절한 물리학 시뮬레이터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Jua&family=Pretendard:wght@400;600;800&display=swap');
+        
+        body { 
+            background-color: #f8fafc; 
+            font-family: 'Pretendard', sans-serif;
+            word-break: keep-all;
+        }
+        h1 { font-family: 'Jua', sans-serif; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-color: #3b82f6;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50">
+
+    <div class="max-w-6xl mx-auto px-6 py-12">
+        <!-- 헤더 섹션 -->
+        <header class="text-center mb-16">
+            <h1 class="text-5xl md:text-6xl mb-4 gradient-text">시뮬레이터 라이브러리</h1>
+            <p class="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
+                복잡한 과학 원리와 기술적 메커니즘을 시각적으로 탐구하는 시뮬레이션 모음입니다.
+            </p>
+            
+            <div class="mt-8 inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-100 rounded-full text-blue-700 text-sm font-semibold">
+                <span class="relative flex h-2 w-2 mr-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                제작자: 김현석
+            </div>
+        </header>
+
+        <!-- 그리드 레이아웃 (새 항목 추가 시 아래에 추가) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <!-- 1. CT 시뮬레이터 (Professional) -->
+            <a href="CT_simulator.html" class="glass-card group p-8 rounded-3xl block">
+                <div class="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <span class="text-2xl">📸</span>
+                </div>
+                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">CT 시뮬레이터<br><span class="text-sm font-medium text-blue-600 uppercase tracking-widest">Professional Edition</span></h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6">
+                    라돈 변환과 필터 보정 역투영 원리를 이용한 정밀 의료 영상 재구성 시뮬레이션입니다.
+                </p>
+                <div class="flex items-center text-blue-600 font-bold text-sm">
+                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
+                </div>
+            </a>
+
+            <!-- 2. CT 영상분석 시뮬레이터 (Education) -->
+            <a href="CT_EDU_simulator.html" class="glass-card group p-8 rounded-3xl block">
+                <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-white">
+                    <span class="text-2xl">🧬</span>
+                </div>
+                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">CT 영상분석 기초<br><span class="text-sm font-medium text-blue-500 uppercase tracking-widest">Educational Tool</span></h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6">
+                    데이터 격자 분석과 히트맵을 통해 CT 이미지 데이터의 구조를 학습하는 교육용 도구입니다.
+                </p>
+                <div class="flex items-center text-blue-600 font-bold text-sm">
+                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
+                </div>
+            </a>
+
+            <!-- 3. 포물선 충돌 시뮬레이터 -->
+            <a href="projectile_collision.html" class="glass-card group p-8 rounded-3xl block border-blue-100">
+                <div class="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <span class="text-2xl">🚀</span>
+                </div>
+                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">포물선 대격돌<br><span class="text-sm font-medium text-red-500 uppercase tracking-widest">Physics Dynamics</span></h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6">
+                    발사각과 지연 시간을 조절하여 두 물체의 궤적 충돌을 실험하는 물리 역학 시뮬레이션입니다.
+                </p>
+                <div class="flex items-center text-blue-600 font-bold text-sm">
+                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
+                </div>
+            </a>
+
+            <!-- 향후 추가될 시뮬레이터 자리를 위한 플레이스홀더 -->
+            <div class="border-2 border-dashed border-slate-200 p-8 rounded-3xl flex flex-col items-center justify-center text-center opacity-60">
+                <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                    <span class="text-slate-400 text-2xl">+</span>
+                </div>
+                <p class="text-slate-400 font-medium">새로운 시뮬레이터<br>준비 중</p>
+            </div>
+
+        </div>
+
+        <!-- 푸터 -->
+        <footer class="mt-24 pt-8 border-t border-slate-200 text-center text-slate-400 text-sm">
+            <p>© 2026. 김현석. All rights reserved.</p>
+            <p class="mt-2">Contact: <a href="mailto:tragowl@onedu.jje.go.kr" class="text-blue-400 hover:underline">tragowl@onedu.jje.go.kr</a></p>
+            <p class="mt-4 text-xs">본 페이지의 모든 시뮬레이터는 교육용으로만 사용 가능합니다.</p>
+        </footer>
+    </div>
+
+</body>
+</html>

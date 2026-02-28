@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CT 시뮬레이터 - Professional Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #020617; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        input[type=range] { cursor: pointer; }
+        canvas { image-rendering: pixelated; }
+        
+        @media (max-width: 1024px) {
+            .main-content { height: auto !important; overflow-y: auto !important; }
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="px-6 py-4 border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-1.5 bg-emerald-500 rounded-lg text-slate-900 shadow-lg shadow-emerald-500/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-black tracking-tighter text-white uppercase italic leading-none">CT 시뮬레이터</h1>
+                    <p class="text-[9px] mt-1 text-slate-500 font-medium tracking-tight">
+                        &copy; Kim HyunSeok (tragowl@onedu.jje.go.kr) | 교육적 이용 허용 / 상업적 이용 금지
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-full border border-slate-700">
+                    <div id="statusDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span id="statusText" class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">System Ready</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content flex-1 flex flex-col lg:flex-row p-4 lg:p-6 gap-6 bg-slate-950 overflow-hidden">
+        
+        <!-- Sidebar Controls -->
+        <aside class="w-full lg:w-72 flex flex-col gap-4">
+            <div class="bg-slate-900/40 border border-slate-800 p-5 rounded-3xl shadow-xl">
+                <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    파라미터 설정
+                </h2>
+                
+                <div class="space-y-6">
+                    <!-- Matrix Size -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">매트릭스 크기</span>
+                            <span id="val-res" class="text-[11px] font-mono font-bold text-emerald-400">64x64</span>
+                        </div>
+                        <input type="range" id="resInput" min="32" max="128" step="32" value="64" class="w-full h-1 bg-slate-800 rounded-full appearance-none accent-emerald-500">
+                    </div>
+
+                    <!-- Beam Channels -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">빔 채널 수 (Ch)</span>
+                            <span id="val-beams" class="text-[11px] font-mono font-bold text-emerald-400">40 Ch</span>
+                        </div>
+                        <input type="range" id="beamsInput" min="8" max="80" step="8" value="40" class="w-full h-1 bg-slate-800 rounded-full appearance-none accent-emerald-500">
+                    </div>
+
+                    <!-- Rotation Steps -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">회전 각도 범위</span>
+                            <span id="val-steps" class="text-[11px] font-mono font-bold text-emerald-400">180°</span>
+                        </div>
+                        <input type="range" id="stepsInput" min="45" max="360" step="45" value="180" class="w-full h-1 bg-slate-800 rounded-full appearance-none accent-emerald-500">
+                    </div>
+                </div>
+
+                <div class="mt-8 space-y-3">
+                    <button id="scanBtn" class="w-full py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 bg-emerald-500 text-slate-950 hover:bg-emerald-400">
+                        <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <span id="btnText">스캔 시작</span>
+                    </button>
+                    <button id="resetBtn" class="w-full py-3 rounded-2xl font-bold text-[10px] tracking-widest uppercase flex items-center justify-center gap-2 border border-slate-700 text-slate-500 hover:bg-slate-800 hover:text-slate-300 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                        시스템 초기화
+                    </button>
+                </div>
+            </div>
+            
+            <div class="hidden lg:block p-4 rounded-2xl border border-slate-800/50 bg-slate-900/20">
+                <div class="text-[9px] font-bold text-slate-500 uppercase mb-2">재구축 알고리즘</div>
+                <div class="text-[11px] text-emerald-400 font-mono italic">Iterative SART V2.5</div>
+            </div>
+        </aside>
+
+        <!-- Display Panel -->
+        <div class="flex-1 flex flex-col gap-6 overflow-hidden">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 h-auto md:h-1/2 min-h-[300px]">
+                <!-- Physics Gantry -->
+                <div class="bg-slate-900/30 border border-slate-800 rounded-[2.5rem] p-5 flex flex-col items-center justify-center relative shadow-inner">
+                    <div class="absolute top-4 left-6 flex items-center gap-2">
+                        <div class="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
+                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">실시간 갠트리 (Gantry)</span>
+                    </div>
+                    <canvas id="gantryCanvas" width="300" height="300" class="max-w-full max-h-full aspect-square"></canvas>
+                </div>
+
+                <!-- Sinogram -->
+                <div class="bg-slate-900/30 border border-slate-800 rounded-[2.5rem] p-5 flex flex-col relative shadow-inner">
+                    <div class="absolute top-4 left-6 flex items-center gap-2 text-cyan-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                        <span class="text-[9px] font-black uppercase tracking-widest">사이노그램 (데이터 맵)</span>
+                    </div>
+                    <div class="flex-1 mt-8 bg-black/50 rounded-2xl overflow-hidden border border-slate-800">
+                        <canvas id="sinoCanvas" class="w-full h-full block"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reconstruction Output -->
+            <div class="flex-1 bg-slate-900/40 border border-slate-800 rounded-[3rem] p-6 lg:p-8 flex flex-col relative shadow-2xl overflow-hidden min-h-[350px]">
+                <div class="absolute top-4 left-8 flex items-center gap-2 text-emerald-400">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em]">단층 영상 재구축 결과</span>
+                </div>
+                
+                <div class="flex-1 flex flex-row items-center justify-center gap-4 lg:gap-16 mt-4">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="p-1.5 bg-slate-800 rounded-3xl border border-slate-700 shadow-xl">
+                            <canvas id="phantomCanvas" width="256" height="256" class="w-32 md:w-48 lg:w-56 h-auto bg-black rounded-2xl"></canvas>
+                        </div>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">원본 팬텀 (True)</span>
+                    </div>
+                    
+                    <div class="h-32 w-px bg-gradient-to-b from-transparent via-slate-800 to-transparent"></div>
+                    
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="p-1.5 bg-emerald-500/10 rounded-3xl border border-emerald-500/30 shadow-[0_0_40px_rgba(16,185,129,0.1)]">
+                            <canvas id="reconCanvas" width="256" height="256" class="w-32 md:w-48 lg:w-56 h-auto bg-black rounded-2xl"></canvas>
+                        </div>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-emerald-500">재구축 영상</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- State ---
+        let state = {
+            resolution: 64,
+            numAngles: 180,
+            numBeams: 40,
+            isScanning: false,
+            currentAngleIdx: 0,
+            phantom: [],
+            sinogram: [], 
+            reconstructed: [],
+            regularization: 0.05
+        };
+
+        const gCanvas = document.getElementById('gantryCanvas');
+        const gCtx = gCanvas.getContext('2d');
+        const sCanvas = document.getElementById('sinoCanvas');
+        const sCtx = sCanvas.getContext('2d');
+        const pCanvas = document.getElementById('phantomCanvas');
+        const rCanvas = document.getElementById('reconCanvas');
+
+        // --- Initialization ---
+        function initData() {
+            const N = state.resolution;
+            state.phantom = new Float32Array(N * N);
+            state.reconstructed = new Float32Array(N * N).fill(0.001);
+            state.sinogram = Array.from({length: state.numAngles}, () => new Float32Array(state.numBeams).fill(0));
+            state.currentAngleIdx = 0;
+            state.isScanning = false;
+
+            const center = N / 2;
+            for (let i = 0; i < N; i++) {
+                for (let j = 0; j < N; j++) {
+                    const y = (center - i) / (N / 2.2);
+                    const x = (j - center) / (N / 2.2);
+                    const r2 = x * x + y * y;
+                    
+                    if (r2 < 0.9 && r2 > 0.85) state.phantom[i * N + j] = 1.0; 
+                    else if (r2 < 0.85) state.phantom[i * N + j] = 0.15; 
+                    
+                    if ((x - 0.3) ** 2 + (y - 0.3) ** 2 < 0.04) state.phantom[i * N + j] = 0.85; 
+                    if ((x + 0.35) ** 2 + (y - 0.1) ** 2 < 0.08) state.phantom[i * N + j] = 0.5; 
+                    if (x ** 2 + (y + 0.5) ** 2 < 0.02) state.phantom[i * N + j] = 0.95; 
+                }
+            }
+            
+            drawAll();
+            updateUI();
+            toggleScan(false);
+        }
+
+        function toggleScan(force) {
+            state.isScanning = force !== undefined ? force : !state.isScanning;
+            const btn = document.getElementById('scanBtn');
+            const icon = document.getElementById('btnIcon');
+            const text = document.getElementById('btnText');
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+
+            if (state.isScanning) {
+                btn.className = "w-full py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 bg-rose-500 text-white";
+                text.innerText = "스캔 중단";
+                icon.innerHTML = '<rect x="6" y="6" width="12" height="12"></rect>';
+                statusDot.className = "w-2 h-2 rounded-full bg-rose-500 animate-ping";
+                statusText.innerText = "Scanning...";
+                performScanStep();
+            } else {
+                btn.className = "w-full py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 bg-emerald-500 text-slate-950 hover:bg-emerald-400";
+                text.innerText = "스캔 시작";
+                icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                statusText.innerText = "System Ready";
+            }
+        }
+
+        function performScanStep() {
+            if (!state.isScanning) return;
+            if (state.currentAngleIdx >= state.numAngles) {
+                toggleScan(false);
+                return;
+            }
+
+            const angleIdx = state.currentAngleIdx;
+            const N = state.resolution;
+            const theta = (angleIdx * Math.PI) / 180;
+            const ct = Math.cos(theta);
+            const st = Math.sin(theta);
+            const beamPositions = Array.from({ length: state.numBeams }, (_, i) => -0.9 + (1.8 * i) / (state.numBeams - 1));
+
+            const lambda = 0.12; 
+            
+            beamPositions.forEach((d, bIdx) => {
+                let actual = 0; let count = 0;
+                for (let s = -1.1; s <= 1.1; s += 0.04) {
+                    const x = d * ct - s * st;
+                    const y = d * st + s * ct;
+                    const col = Math.floor((x + 1) * (N / 2));
+                    const row = Math.floor((1 - y) * (N / 2));
+                    if (row >= 0 && row < N && col >= 0 && col < N) {
+                        actual += state.phantom[row * N + col];
+                        count++;
+                    }
+                }
+                actual = count > 0 ? (actual / count) * 2.0 : 0;
+                state.sinogram[angleIdx][bIdx] = actual;
+
+                let estimated = 0;
+                let path = [];
+                for (let s = -1.1; s <= 1.1; s += 0.04) {
+                    const x = d * ct - s * st;
+                    const y = d * st + s * ct;
+                    const col = Math.floor((x + 1) * (N / 2));
+                    const row = Math.floor((1 - y) * (N / 2));
+                    if (row >= 0 && row < N && col >= 0 && col < N) {
+                        estimated += state.reconstructed[row * N + col];
+                        path.push(row * N + col);
+                    }
+                }
+                estimated = path.length > 0 ? estimated / path.length : 0;
+                
+                const error = actual - estimated;
+                path.forEach(idx => {
+                    state.reconstructed[idx] += error * lambda;
+                    if (state.reconstructed[idx] < 0) state.reconstructed[idx] = 0;
+                });
+            });
+
+            state.currentAngleIdx += 2; 
+            drawAll();
+            requestAnimationFrame(performScanStep);
+        }
+
+        function drawAll() {
+            renderGantry();
+            renderSinogram();
+            drawMatrix(pCanvas, state.phantom, state.resolution);
+            drawMatrix(rCanvas, state.reconstructed, state.resolution);
+        }
+
+        function drawMatrix(canvas, data, N) {
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width / N;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < N; i++) {
+                for (let j = 0; j < N; j++) {
+                    const v = Math.min(255, data[i * N + j] * 255);
+                    if (v > 1) {
+                        ctx.fillStyle = `rgb(${v}, ${v}, ${v})`;
+                        ctx.fillRect(j * size, i * size, size + 0.5, size + 0.5);
+                    }
+                }
+            }
+        }
+
+        function renderSinogram() {
+            const w = state.numAngles;
+            const h = state.numBeams;
+            sCanvas.width = w; sCanvas.height = h;
+            const imgData = sCtx.createImageData(w, h);
+            for (let a = 0; a < w; a++) {
+                for (let b = 0; b < h; b++) {
+                    const v = state.sinogram[a][b] * 200;
+                    const idx = (b * w + a) * 4;
+                    imgData.data[idx] = v * 0.4;
+                    imgData.data[idx+1] = v * 0.8;
+                    imgData.data[idx+2] = v;
+                    imgData.data[idx+3] = 255;
+                }
+            }
+            sCtx.putImageData(imgData, 0, 0);
+        }
+
+        function renderGantry() {
+            const S = gCanvas.width;
+            const N = state.resolution;
+            const centerX = S/2; const centerY = S/2;
+            const R = S * 0.42;
+
+            gCtx.fillStyle = '#020617';
+            gCtx.fillRect(0, 0, S, S);
+            
+            const miniSize = (S * 0.6) / N;
+            const offset = (S - (miniSize * N)) / 2;
+            for (let i = 0; i < N; i++) {
+                for (let j = 0; j < N; j++) {
+                    const v = state.phantom[i * N + j] * 255;
+                    if (v > 10) {
+                        gCtx.fillStyle = `rgba(${v/3}, ${v/2}, ${v/1.5}, 0.5)`;
+                        gCtx.fillRect(offset + j * miniSize, offset + i * miniSize, miniSize + 0.5, miniSize + 0.5);
+                    }
+                }
+            }
+
+            const rad = (state.currentAngleIdx * Math.PI) / 180;
+            
+            if (state.isScanning) {
+                const beamPositions = Array.from({ length: state.numBeams }, (_, i) => -0.8 + (1.6 * i) / (state.numBeams - 1));
+                const ct = Math.cos(rad); const st = Math.sin(rad);
+                
+                gCtx.strokeStyle = 'rgba(16, 185, 129, 0.25)';
+                gCtx.lineWidth = 1;
+                beamPositions.forEach(d => {
+                    const x1 = (d * ct - (-1.1) * st) * (S/2.5) + centerX;
+                    const y1 = (d * st + (-1.1) * ct) * (S/2.5) + centerY;
+                    const x2 = (d * ct - (1.1) * st) * (S/2.5) + centerX;
+                    const y2 = (d * st + (1.1) * ct) * (S/2.5) + centerY;
+                    gCtx.beginPath(); gCtx.moveTo(x1, y1); gCtx.lineTo(x2, y2); gCtx.stroke();
+                });
+            }
+
+            const drawPart = (a, color) => {
+                gCtx.save();
+                gCtx.translate(centerX, centerY);
+                gCtx.rotate(a + rad);
+                gCtx.strokeStyle = color; gCtx.lineWidth = 10; gCtx.lineCap = 'round';
+                gCtx.beginPath(); gCtx.arc(0, 0, R, -0.4, 0.4); gCtx.stroke();
+                gCtx.restore();
+            };
+            drawPart(Math.PI/2, '#f43f5e'); 
+            drawPart(-Math.PI/2, '#0ea5e9'); 
+            
+            gCtx.strokeStyle = '#1e293b'; gCtx.lineWidth = 1;
+            gCtx.beginPath(); gCtx.arc(centerX, centerY, R, 0, Math.PI*2); gCtx.stroke();
+        }
+
+        function updateUI() {
+            document.getElementById('val-res').innerText = `${state.resolution}x${state.resolution}`;
+            document.getElementById('val-beams').innerText = `${state.numBeams} Ch`;
+            document.getElementById('val-steps').innerText = `${state.numAngles}°`;
+        }
+
+        document.getElementById('resInput').oninput = (e) => { state.resolution = parseInt(e.target.value); initData(); };
+        document.getElementById('beamsInput').oninput = (e) => { state.numBeams = parseInt(e.target.value); initData(); };
+        document.getElementById('stepsInput').oninput = (e) => { state.numAngles = parseInt(e.target.value); initData(); };
+        document.getElementById('scanBtn').onclick = () => toggleScan();
+        document.getElementById('resetBtn').onclick = () => initData();
+
+        window.onload = initData;
+    </script>
+</body>
+</html>
