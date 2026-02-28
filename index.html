@@ -33,6 +33,17 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
+        .category-label {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-slate-50">
@@ -54,27 +65,43 @@
             </div>
         </header>
 
-        <!-- 그리드 레이아웃 (새 항목 추가 시 아래에 추가) -->
+        <!-- 그리드 레이아웃 -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             
-            <!-- 1. CT 시뮬레이터 (Professional) -->
-            <a href="CT_simulator.html" class="glass-card group p-8 rounded-3xl block">
-                <div class="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <span class="text-2xl">📸</span>
+            <!-- [1행] 기초 역학 계열 -->
+            <div class="lg:col-span-3">
+                <h2 class="text-lg font-bold text-slate-400 mb-4 flex items-center gap-2">
+                    <span class="w-8 h-[1px] bg-slate-300"></span> 기초 역학 및 운동 법칙
+                </h2>
+            </div>
+
+            <!-- 1. 포물선 충돌 시뮬레이터 -->
+            <a href="projectile_collision.html" class="glass-card group p-8 rounded-3xl block border-red-50">
+                <span class="category-label bg-red-100 text-red-600">Dynamics</span>
+                <div class="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-red-200">
+                    <span class="text-2xl">🚀</span>
                 </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">CT 시뮬레이터<br><span class="text-sm font-medium text-blue-600 uppercase tracking-widest">Professional Edition</span></h3>
+                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">포물선 대격돌<br><span class="text-sm font-medium text-red-500 uppercase tracking-widest">Physics Dynamics</span></h3>
                 <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    라돈 변환과 필터 보정 역투영 원리를 이용한 정밀 의료 영상 재구성 시뮬레이션입니다.
+                    발사각과 지연 시간을 조절하여 두 물체의 궤적 충돌을 실험하는 물리 역학 시뮬레이션입니다.
                 </p>
                 <div class="flex items-center text-blue-600 font-bold text-sm">
                     입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
                 </div>
             </a>
 
+            <!-- [2행] 응용 물리 및 의료 공학 계열 -->
+            <div class="lg:col-span-3 mt-8">
+                <h2 class="text-lg font-bold text-slate-400 mb-4 flex items-center gap-2">
+                    <span class="w-8 h-[1px] bg-slate-300"></span> 응용 물리 및 의료 영상 기술
+                </h2>
+            </div>
+
             <!-- 2. CT 영상분석 시뮬레이터 (Education) -->
             <a href="CT_EDU_simulator.html" class="glass-card group p-8 rounded-3xl block">
-                <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-white">
-                    <span class="text-2xl">🧬</span>
+                <span class="category-label bg-blue-100 text-blue-600">Medical Data</span>
+                <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-blue-300">
+                    <span class="text-2xl text-white">🧬</span>
                 </div>
                 <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">CT 영상분석 기초<br><span class="text-sm font-medium text-blue-500 uppercase tracking-widest">Educational Tool</span></h3>
                 <p class="text-slate-500 text-sm leading-relaxed mb-6">
@@ -85,14 +112,37 @@
                 </div>
             </a>
 
-            <!-- 3. 포물선 충돌 시뮬레이터 -->
-            <a href="bird_simulator.html" class="glass-card group p-8 rounded-3xl block border-blue-100">
-                <div class="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <span class="text-2xl">🚀</span>
+            <!-- 3. CT 시뮬레이터 (Professional) -->
+            <a href="CT_simulator.html" class="glass-card group p-8 rounded-3xl block">
+                <span class="category-label bg-slate-200 text-slate-700">Imaging Physics</span>
+                <div class="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-slate-300">
+                    <span class="text-2xl text-white">📸</span>
                 </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">포물선 대격돌<br><span class="text-sm font-medium text-red-500 uppercase tracking-widest">Physics Dynamics</span></h3>
+                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">CT 시뮬레이터<br><span class="text-sm font-medium text-blue-600 uppercase tracking-widest">Professional Edition</span></h3>
                 <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    발사각과 지연 시간을 조절하여 두 물체의 궤적 충돌을 실험하는 물리 역학 시뮬레이션입니다.
+                    라돈 변환과 필터 보정 역투영 원리를 이용한 정밀 의료 영상 재구성 시뮬레이션입니다.
+                </p>
+                <div class="flex items-center text-blue-600 font-bold text-sm">
+                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
+                </div>
+            </a>
+
+            <!-- [3행] 복잡계 및 생명 물리 계열 -->
+            <div class="lg:col-span-3 mt-8">
+                <h2 class="text-lg font-bold text-slate-400 mb-4 flex items-center gap-2">
+                    <span class="w-8 h-[1px] bg-slate-300"></span> 복잡계 및 생물리학
+                </h2>
+            </div>
+
+            <!-- 4. 비첵 모델 시뮬레이터 -->
+            <a href="vicsek_simulator.html" class="glass-card group p-8 rounded-3xl block border-blue-200">
+                <span class="category-label bg-emerald-100 text-emerald-600">Complex Systems</span>
+                <div class="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-emerald-200">
+                    <span class="text-2xl text-white">🐟</span>
+                </div>
+                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">생명체 군집 거동<br><span class="text-sm font-medium text-emerald-600 uppercase tracking-widest">Vicsek Model</span></h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6">
+                    비첵 모델을 활용하여 새 떼나 물고기 군집의 자기 조직화와 상전이 현상을 실시간으로 분석합니다.
                 </p>
                 <div class="flex items-center text-blue-600 font-bold text-sm">
                     입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
@@ -113,10 +163,9 @@
         <footer class="mt-24 pt-8 border-t border-slate-200 text-center text-slate-400 text-sm">
             <p>© 2026. 김현석. All rights reserved.</p>
             <p class="mt-2">Contact: <a href="mailto:tragowl@onedu.jje.go.kr" class="text-blue-400 hover:underline">tragowl@onedu.jje.go.kr</a></p>
-            <p class="mt-4 text-xs">본 페이지의 모든 시뮬레이터는 교육용으로만 사용 가능합니다.</p>
+            <p class="mt-4 text-xs font-light">본 페이지의 모든 시뮬레이터는 교육적 목적의 탐구 활동을 지원하기 위해 설계되었습니다.</p>
         </footer>
     </div>
 
 </body>
-
 </html>
