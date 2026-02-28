@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>비첵 모델을 이용한 생명체 군집의 거동 모사</title>
+    <title>비첵 모델: 생명체 군집 거동 모사</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- MathJax 수식 렌더링 라이브러리 추가 -->
     <script>
         window.MathJax = {
             tex: {
@@ -21,112 +20,133 @@
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Jua&family=Pretendard:wght@400;600;800&display=swap');
-        body { background-color: #0f172a; font-family: 'Pretendard', sans-serif; color: #f1f5f9; }
+        body { background-color: #0f172a; font-family: 'Pretendard', sans-serif; color: #f1f5f9; overflow-x: hidden; }
         h1, h2 { font-family: 'Jua', sans-serif; }
         .control-panel { background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(10px); }
         input[type=range] { accent-color: #3b82f6; cursor: pointer; }
-        canvas { background-color: #020617; border-radius: 1rem; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
-        .math { font-family: 'Times New Roman', serif; font-style: italic; color: #94a3b8; }
-        .info-card { background: rgba(15, 23, 42, 0.6); border-left: 4px solid #3b82f6; }
+        canvas { background-color: #020617; border-radius: 1.5rem; box-shadow: 0 0 50px rgba(0,0,0,0.8); width: 100%; }
+        .info-card { background: rgba(30, 41, 59, 0.5); border-top: 4px solid #3b82f6; transition: transform 0.2s; }
+        .info-card:hover { transform: translateY(-5px); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
 
-    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
-        
-        <!-- 왼쪽: 시뮬레이션 및 컨트롤 -->
-        <div class="flex-1 flex flex-col gap-6">
-            <header>
-                <h1 class="text-4xl text-blue-400 mb-2">비첵 모델을 이용한 생명체 군집의 거동 모사</h1>
-                <p class="text-slate-400">Vicsek Model: Emerging Collective Behavior in Biological Systems</p>
-            </header>
-
-            <div class="relative bg-slate-900 rounded-3xl p-2 border border-slate-700">
-                <canvas id="vicsekCanvas" class="w-full aspect-video"></canvas>
-                <div class="absolute top-6 right-6 flex gap-4">
-                    <div class="bg-black/60 backdrop-blur px-4 py-2 rounded-xl border border-white/10 text-center">
-                        <div class="text-[10px] text-slate-400 uppercase">Order Parameter</div>
-                        <div id="orderParam" class="text-2xl font-bold text-blue-400 font-mono">0.00</div>
-                    </div>
-                </div>
+    <div class="max-w-6xl mx-auto space-y-8">
+        <header class="flex flex-col md:flex-row justify-between items-end gap-4">
+            <div>
+                <h1 class="text-4xl text-blue-400 mb-2">비첵 모델 (Vicsek Model)</h1>
+                <p class="text-slate-400">Standard Model with Modified Collision Avoidance</p>
             </div>
+            <div class="bg-black/40 backdrop-blur px-6 py-3 rounded-2xl border border-white/10 text-center">
+                <div class="text-[10px] text-slate-400 uppercase tracking-widest mb-1">Order Parameter (질서도)</div>
+                <div id="orderParam" class="text-3xl font-bold text-blue-400 font-mono">0.00</div>
+            </div>
+        </header>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="control-panel p-6 rounded-2xl border border-slate-700 space-y-4">
-                    <h2 class="text-xl text-slate-200 flex items-center gap-2">⚙️ 실시간 파라미터 조절</h2>
-                    <div>
-                        <div class="flex justify-between text-sm mb-2"><span>소음 수준 (Noise, $\eta$)</span><span id="noiseVal" class="text-blue-400 font-mono">0.10</span></div>
-                        <input type="range" id="noiseInput" min="0" max="5" step="0.01" value="0.1" class="w-full">
+        <div class="relative group">
+            <canvas id="vicsekCanvas" class="aspect-[21/9] md:aspect-[21/7]"></canvas>
+            <div class="absolute bottom-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span class="bg-black/60 text-[10px] px-2 py-1 rounded border border-white/10 uppercase">Simulation Space</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-1 space-y-4">
+                <div class="control-panel p-6 rounded-3xl border border-slate-700 space-y-6">
+                    <h2 class="text-xl text-slate-200 flex items-center gap-2">⚙️ 물리 법칙 조정</h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-2"><span>소음 수준 ($\eta$)</span><span id="noiseVal" class="text-blue-400 font-mono">0.10</span></div>
+                            <input type="range" id="noiseInput" min="0" max="5" step="0.01" value="0.1" class="w-full">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-2"><span>상호작용 반경 ($R$)</span><span id="radiusVal" class="text-blue-400 font-mono">30</span></div>
+                            <input type="range" id="radiusInput" min="5" max="150" step="1" value="30" class="w-full">
+                        </div>
+                        <div class="pt-2 border-t border-slate-700">
+                            <div class="flex justify-between text-sm mb-2 font-bold text-orange-300"><span>최소 거리 (모델 수정)</span><span id="sepVal" class="text-orange-400 font-mono">10</span></div>
+                            <input type="range" id="sepInput" min="0" max="50" step="1" value="10" class="w-full">
+                            <p class="text-[10px] text-slate-500 mt-1">*0으로 설정 시 순수 비첵 모델로 작동합니다.</p>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-2"><span>이동 속도 ($v$)</span><span id="speedVal" class="text-blue-400 font-mono">2.0</span></div>
+                            <input type="range" id="speedInput" min="0.5" max="10" step="0.1" value="2" class="w-full">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-2"><span>개체 수 (Density)</span><span id="countVal" class="text-blue-400 font-mono">400</span></div>
+                            <input type="range" id="countInput" min="50" max="1500" step="50" value="400" class="w-full">
+                        </div>
                     </div>
-                    <div>
-                        <div class="flex justify-between text-sm mb-2"><span>상호작용 반경 ($R$)</span><span id="radiusVal" class="text-blue-400 font-mono">30</span></div>
-                        <input type="range" id="radiusInput" min="5" max="150" step="1" value="30" class="w-full">
-                    </div>
-                    <div class="flex gap-4">
+
+                    <div class="flex gap-3 pt-2">
                         <button id="resetBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-xl font-bold transition">초기화</button>
                         <button id="pauseBtn" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold transition">일시정지</button>
                     </div>
                 </div>
+            </div>
 
-                <div class="control-panel p-6 rounded-2xl border border-slate-700 space-y-4">
-                    <h2 class="text-xl text-slate-200 flex items-center gap-2">🏃 거동 파라미터</h2>
+            <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+                <!-- 비첵 모델 기본 원리 카드 -->
+                <div class="info-card p-6 rounded-3xl flex flex-col justify-between border-t-blue-500">
                     <div>
-                        <div class="flex justify-between text-sm mb-2"><span>이동 속도 ($v$)</span><span id="speedVal" class="text-blue-400 font-mono">2.0</span></div>
-                        <input type="range" id="speedInput" min="0.5" max="10" step="0.1" value="2" class="w-full">
+                        <h2 class="text-lg text-blue-300 mb-3 font-bold">비첵 모델의 기본 원리</h2>
+                        <p class="text-sm text-slate-300 leading-relaxed">
+                            입자들은 자신의 위치에서 반경 $R$ 이내에 있는 이웃들의 <strong>평균 이동 방향</strong>을 계산하여 그 방향으로 자신의 각도를 업데이트합니다. 이는 '정렬(Alignment)'이라는 자기 조직화의 핵심 메커니즘입니다.
+                        </p>
                     </div>
-                    <div>
-                        <div class="flex justify-between text-sm mb-2"><span>개체 밀도 (Count)</span><span id="countVal" class="text-blue-400 font-mono">300</span></div>
-                        <input type="range" id="countInput" min="50" max="1200" step="50" value="300" class="w-full">
+                    <div class="mt-4 p-3 bg-black/30 rounded-xl font-mono text-xs text-center border border-white/5">
+                        $\theta_{i}(t+1) = \text{Arg}\left[\sum_{j \in \mathcal{N}_i} e^{i \theta_j(t)}\right] + \Delta\eta$
+                    </div>
+                </div>
+
+                <!-- 모델 수정 사항 카드 -->
+                <div class="info-card p-6 rounded-3xl border-t-orange-500">
+                    <h2 class="text-lg text-orange-300 mb-3 font-bold">모델의 수정: 배격성 추가</h2>
+                    <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                        순수 비첵 모델은 입자들이 겹치는 현상을 고려하지 않습니다. 실제 생명체의 거동을 더 잘 묘사하기 위해, <strong>최소 안전 거리</strong> 내에 이웃이 들어오면 정렬보다 <strong>회피(Avoidance)</strong>를 우선하도록 알고리즘을 보완했습니다.
+                    </p>
+                    <div class="p-3 bg-black/30 rounded-xl font-mono text-[10px] text-slate-400 border border-white/5">
+                        If $d_{ij} < d_{min}$, $\vec{v}_{next}$ is dominant by $-\sum \vec{r}_{ij}$
+                    </div>
+                </div>
+
+                <!-- 관찰 포인트 카드 -->
+                <div class="info-card p-6 rounded-3xl border-t-emerald-500">
+                    <h2 class="text-lg text-emerald-300 mb-3 font-bold">주요 관찰 포인트</h2>
+                    <ul class="text-sm text-slate-300 space-y-3">
+                        <li class="flex gap-2">
+                            <span class="text-emerald-500 font-bold">1.</span>
+                            <span><strong>순수 모델 비교:</strong> 최소 거리를 0으로 설정하여 입자들이 완전히 겹치며 이동하는 순수 비첵 모델의 정렬 속도를 확인해보세요.</span>
+                        </li>
+                        <li class="flex gap-2">
+                            <span class="text-emerald-500 font-bold">2.</span>
+                            <span><strong>상전이 현상:</strong> 노이즈($\eta$) 임계값에 따라 질서도가 급격히 변하는 전형적인 통계 물리 현상을 관찰할 수 있습니다.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 자연계 연결 카드 -->
+                <div class="info-card p-6 rounded-3xl border-t-purple-500">
+                    <h2 class="text-lg text-purple-300 mb-2 font-bold">군집 지능의 세 법칙</h2>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        레이놀즈의 Boids 알고리즘은 정렬(Alignment), 분리(Separation), 응집(Cohesion)을 제안했습니다. 이 시뮬레이션은 비첵 모델(정렬)에 분리(배격성)를 결합하여 확장된 모델을 탐구합니다.
+                    </p>
+                    <div class="flex gap-2 text-[10px] uppercase font-bold text-slate-500">
+                        <div class="px-2 py-1 border border-slate-700 rounded">Alignment</div>
+                        <div class="px-2 py-1 border border-slate-700 rounded">Separation</div>
+                        <div class="px-2 py-1 border border-slate-700 rounded">Cohesion</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 오른쪽: 이론 설명 섹션 -->
-        <div class="w-full lg:w-96 space-y-6 overflow-y-auto max-h-[90vh] pr-2">
-            <section class="info-card p-6 rounded-2xl">
-                <h2 class="text-xl text-blue-300 mb-3">비첵(Vicsek) 모델이란?</h2>
-                <p class="text-sm text-slate-300 leading-relaxed">
-                    1995년 타마스 비첵(Tamás Vicsek) 등에 의해 제안된 통계물리학 모델입니다. 새 떼, 물고기 군영, 박테리아의 흐름과 같은 <strong>자기 추진 입자(Self-propelled particles)</strong>의 집단적인 움직임을 설명하는 가장 단순하면서도 강력한 모델입니다.
-                </p>
-            </section>
-
-            <section class="info-card p-6 rounded-2xl border-l-purple-500">
-                <h2 class="text-xl text-purple-300 mb-3">핵심 메커니즘</h2>
-                <div class="space-y-4 text-sm text-slate-300">
-                    <p>각 입자는 매 스텝마다 다음 규칙을 따릅니다:</p>
-                    <ul class="list-disc ml-4 space-y-2">
-                        <li><strong>정렬(Alignment):</strong> 자신의 위치로부터 반경 $R$ 이내에 있는 모든 이웃 입자들의 평균 이동 방향을 계산합니다.</li>
-                        <li><strong>노이즈(Noise):</strong> 계산된 평균 방향에 무작위적인 오차($\eta$)를 더해 새로운 방향을 결정합니다.</li>
-                    </ul>
-                    <div class="bg-black/40 p-3 rounded-lg font-mono text-xs text-center text-slate-400">
-                        $$\theta_{i}(t+1) = \langle\theta_{j}(t)\rangle_{j \in S_i} + \Delta\eta$$
-                    </div>
-                </div>
-            </section>
-
-            <section class="info-card p-6 rounded-2xl border-l-green-500">
-                <h2 class="text-xl text-green-300 mb-3">과학적 시사점</h2>
-                <div class="space-y-3 text-sm text-slate-300 leading-relaxed">
-                    <p><strong>상전이(Phase Transition):</strong> 소음 수준이 임계값 이하로 떨어지면, 개별적인 무질서 상태에서 집단적인 질서 상태로 급격히 변하는 '상전이' 현상을 관찰할 수 있습니다.</p>
-                    <p><strong>발현(Emergence):</strong> 중앙의 통제관 없이도 개별 요소들의 단순한 상호작용만으로 전체 시스템의 복잡한 구조가 만들어지는 '자기 조직화'를 보여줍니다.</p>
-                </div>
-            </section>
-
-            <section class="info-card p-6 rounded-2xl border-l-orange-500">
-                <h2 class="text-xl text-orange-300 mb-3">현대적 활용</h2>
-                <ul class="text-sm text-slate-300 space-y-2">
-                    <li>• 군집 로봇(Swarm Robotics) 제어 알고리즘</li>
-                    <li>• 군중 밀집 현상 및 대피 시뮬레이션</li>
-                    <li>• 능동적 물질(Active Matter) 연구</li>
-                    <li>• 자율주행 차량의 대열 주행 최적화</li>
-                </ul>
-            </section>
-
-            <footer class="text-center py-4 border-t border-slate-800">
-                <p class="text-[10px] text-slate-500">제작: 김현석 | 교육용 과학 시뮬레이션 시리즈</p>
-            </footer>
-        </div>
+        <footer class="text-center pt-8 border-t border-slate-800 pb-4">
+            <p class="text-xs text-slate-500">김현석 물리학 시뮬레이션 시리즈 | Vicsek Model v2.6 (Physics & Bio-Dynamics)</p>
+        </footer>
     </div>
 
     <script>
@@ -134,9 +154,9 @@
         const ctx = canvas.getContext('2d');
         const orderDisplay = document.getElementById('orderParam');
 
-        // 파라미터 DOM
         const noiseIn = document.getElementById('noiseInput');
         const radiusIn = document.getElementById('radiusInput');
+        const sepIn = document.getElementById('sepInput');
         const speedIn = document.getElementById('speedInput');
         const countIn = document.getElementById('countInput');
 
@@ -144,15 +164,17 @@
         let config = {
             noise: 0.1,
             radius: 30,
+            separation: 10,
             speed: 2,
-            count: 300
+            count: 400
         };
         let isPaused = false;
 
         function resize() {
             const container = canvas.parentElement;
             canvas.width = container.clientWidth;
-            canvas.height = container.clientWidth * (9/16);
+            canvas.height = window.innerWidth < 768 ? container.clientWidth * 0.8 : container.clientWidth * 0.35;
+            initParticles();
         }
 
         class Particle {
@@ -176,28 +198,27 @@
                 if (this.y > canvas.height) this.y -= canvas.height;
             }
             draw() {
-                const size = 6;
+                const size = 5;
                 const hue = (this.theta / (Math.PI * 2)) * 360;
                 
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.rotate(this.theta);
                 
-                // 개체 모양 (화살촉/삼각형)
                 ctx.beginPath();
                 ctx.moveTo(size * 1.5, 0);
-                ctx.lineTo(-size, -size);
+                ctx.lineTo(-size, -size * 0.8);
                 ctx.lineTo(-size * 0.5, 0);
-                ctx.lineTo(-size, size);
+                ctx.lineTo(-size, size * 0.8);
                 ctx.closePath();
                 
-                ctx.fillStyle = `hsl(${hue}, 80%, 65%)`;
+                ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
                 ctx.fill();
                 
-                // 정렬도가 높을 때 발광 효과
-                if (parseFloat(orderDisplay.innerText) > 0.8) {
+                const va = parseFloat(orderDisplay.innerText);
+                if (va > 0.85) {
                     ctx.shadowBlur = 8;
-                    ctx.shadowColor = `hsl(${hue}, 80%, 65%)`;
+                    ctx.shadowColor = `hsl(${hue}, 80%, 60%)`;
                 }
                 
                 ctx.restore();
@@ -221,24 +242,50 @@
                 let sumCos = 0;
                 let neighbors = 0;
 
+                let sepSin = 0;
+                let sepCos = 0;
+                let closeNeighbors = 0;
+
                 for (let j = 0; j < particles.length; j++) {
+                    if (i === j) continue;
                     const other = particles[j];
-                    let dx = Math.abs(p.x - other.x);
-                    let dy = Math.abs(p.y - other.y);
                     
-                    if (dx > canvas.width / 2) dx = canvas.width - dx;
-                    if (dy > canvas.height / 2) dy = canvas.height - dy;
+                    let dx = other.x - p.x;
+                    let dy = other.y - p.y;
                     
-                    if (dx*dx + dy*dy < config.radius * config.radius) {
+                    if (dx > canvas.width / 2) dx -= canvas.width;
+                    if (dx < -canvas.width / 2) dx += canvas.width;
+                    if (dy > canvas.height / 2) dy -= canvas.height;
+                    if (dy < -canvas.height / 2) dy += canvas.height;
+                    
+                    const distSq = dx*dx + dy*dy;
+
+                    // 1. 배격성 (Separation)
+                    if (config.separation > 0 && distSq < config.separation * config.separation && distSq > 0) {
+                        const dist = Math.sqrt(distSq);
+                        sepSin -= dy / dist;
+                        sepCos -= dx / dist;
+                        closeNeighbors++;
+                    }
+
+                    // 2. 정렬 (Alignment) - 비첵 모델의 핵심
+                    if (distSq < config.radius * config.radius) {
                         sumSin += Math.sin(other.theta);
                         sumCos += Math.cos(other.theta);
                         neighbors++;
                     }
                 }
 
-                const avgTheta = Math.atan2(sumSin / neighbors, sumCos / neighbors);
-                const noise = (Math.random() - 0.5) * config.noise;
-                p.nextTheta = avgTheta + noise;
+                if (closeNeighbors > 0) {
+                    p.nextTheta = Math.atan2(sepSin, sepCos);
+                } else if (neighbors > 0) {
+                    const avgTheta = Math.atan2(sumSin / neighbors, sumCos / neighbors);
+                    const noise = (Math.random() - 0.5) * config.noise;
+                    p.nextTheta = avgTheta + noise;
+                } else {
+                    const noise = (Math.random() - 0.5) * config.noise;
+                    p.nextTheta = p.theta + noise;
+                }
 
                 sumSinAll += Math.sin(p.theta);
                 sumCosAll += Math.cos(p.theta);
@@ -247,15 +294,14 @@
             const va = Math.sqrt(sumSinAll**2 + sumCosAll**2) / particles.length;
             orderDisplay.innerText = va.toFixed(2);
             
-            // Order Parameter 값에 따른 색상 피드백
-            if (va > 0.8) orderDisplay.className = "text-2xl font-bold text-green-400 font-mono animate-pulse";
-            else if (va > 0.4) orderDisplay.className = "text-2xl font-bold text-blue-400 font-mono";
-            else orderDisplay.className = "text-2xl font-bold text-red-400 font-mono";
+            if (va > 0.8) orderDisplay.className = "text-3xl font-bold text-emerald-400 font-mono";
+            else if (va > 0.3) orderDisplay.className = "text-3xl font-bold text-blue-400 font-mono";
+            else orderDisplay.className = "text-3xl font-bold text-red-400 font-mono";
         }
 
         function loop() {
             if (!isPaused) {
-                ctx.fillStyle = 'rgba(2, 6, 23, 0.2)'; 
+                ctx.fillStyle = 'rgba(2, 6, 23, 0.3)'; 
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 calculateNextStates();
@@ -267,7 +313,6 @@
             requestAnimationFrame(loop);
         }
 
-        // 컨트롤 연동
         noiseIn.oninput = (e) => {
             config.noise = parseFloat(e.target.value);
             document.getElementById('noiseVal').innerText = config.noise.toFixed(2);
@@ -275,6 +320,10 @@
         radiusIn.oninput = (e) => {
             config.radius = parseInt(e.target.value);
             document.getElementById('radiusVal').innerText = config.radius;
+        };
+        sepIn.oninput = (e) => {
+            config.separation = parseInt(e.target.value);
+            document.getElementById('sepVal').innerText = config.separation;
         };
         speedIn.oninput = (e) => {
             config.speed = parseFloat(e.target.value);
@@ -294,9 +343,18 @@
             e.target.classList.toggle('bg-orange-600');
         };
 
-        window.onresize = resize;
+        window.addEventListener('resize', () => {
+            const oldWidth = canvas.width;
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = window.innerWidth < 768 ? container.clientWidth * 0.8 : container.clientWidth * 0.35;
+            particles.forEach(p => {
+                p.x = (p.x / oldWidth) * canvas.width;
+                p.y = Math.min(p.y, canvas.height);
+            });
+        });
+
         resize();
-        initParticles();
         requestAnimationFrame(loop);
     </script>
 </body>
