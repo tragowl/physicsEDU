@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNN 개별 뉴런 정밀 제어 시뮬레이터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap');
+        body { font-family: 'Pretendard', sans-serif; background: #0f172a; color: #f8fafc; overflow: hidden; }
+        canvas { cursor: crosshair; }
+        .panel { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        input[type=range] { accent-color: #3b82f6; cursor: pointer; height: 4px; border-radius: 2px; }
+        .node-label { pointer-events: none; user-select: none; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+    <header class="p-4 flex justify-between items-center shrink-0 border-b border-white/5 bg-slate-900/90 z-10">
+        <div>
+            <h1 class="text-xl font-extrabold text-blue-400 flex items-center gap-2">
+                🧠 SNN Neuron-Specific Control <span class="text-xs font-normal bg-blue-500/20 px-2 py-1 rounded text-blue-300">Individual Tuning</span>
+            </h1>
+            <p class="text-slate-400 text-xs mt-1">뉴런을 클릭하여 개별 파라미터와 시냅스 가중치를 조정하세요.</p>
+        </div>
+        <div class="flex gap-2">
+            <button id="resetViewBtn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs transition border border-white/5">화면 맞춤</button>
+            <button id="resetSimBtn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs transition border border-white/5">초기화</button>
+            <button id="pauseBtn" class="px-5 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold transition shadow-lg">일시정지</button>
+        </div>
+    </header>
+
+    <main class="flex-1 relative flex overflow-hidden">
+        <canvas id="simCanvas" class="flex-1"></canvas>
+
+        <!-- Left: Overall Stats & Stimuli -->
+        <div class="absolute top-6 left-6 pointer-events-none flex flex-col gap-4 w-64 z-10">
+            <section class="panel p-5 rounded-2xl pointer-events-auto shadow-2xl border-l-4 border-l-blue-500">
+                <h2 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Input Stimuli</h2>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="triggerInput(0)" class="py-2 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/30 rounded-lg text-xs font-bold text-blue-400">IN 1</button>
+                    <button onclick="triggerInput(1)" class="py-2 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/30 rounded-lg text-xs font-bold text-blue-400">IN 2</button>
+                    <button onclick="triggerInput(2)" class="py-2 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/30 rounded-lg text-xs font-bold text-blue-400">IN 3</button>
+                </div>
+            </section>
+
+            <section class="panel p-5 rounded-2xl pointer-events-auto shadow-2xl border-l-4 border-l-purple-500">
+                <h2 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Output Status</h2>
+                <div id="output-list" class="space-y-3">
+                    <!-- Dynamic Output Bars -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Right: Individual Neuron Editor -->
+        <div id="editorPanel" class="absolute top-6 right-6 pointer-events-none w-80 z-10 hidden">
+            <section class="panel p-6 rounded-2xl pointer-events-auto shadow-2xl border-r-4 border-r-emerald-500 max-h-[85vh] overflow-y-auto no-scrollbar">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 id="editNeuronTitle" class="text-lg font-black text-emerald-400 uppercase tracking-tight">Neuron #0</h2>
+                        <span id="editNeuronType" class="text-[10px] px-2 py-0.5 bg-white/10 rounded-full text-white/60">Type: Excitatory</span>
+                    </div>
+                    <button onclick="closeEditor()" class="text-slate-500 hover:text-white">✕</button>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Threshold -->
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-2 font-bold">
+                            <label class="text-slate-400">역치 (Threshold)</label>
+                            <span id="val_threshold" class="text-emerald-400">1.00</span>
+                        </div>
+                        <input type="range" id="input_threshold" min="0.1" max="3.0" step="0.05" class="w-full">
+                    </div>
+
+                    <!-- Leak -->
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-2 font-bold">
+                            <label class="text-slate-400">누설률 (Leak Rate)</label>
+                            <span id="val_leak" class="text-emerald-400">0.02</span>
+                        </div>
+                        <input type="range" id="input_leak" min="0.001" max="0.2" step="0.001" class="w-full">
+                    </div>
+
+                    <div class="border-t border-white/5 pt-4">
+                        <h3 class="text-[10px] font-bold text-slate-500 uppercase mb-4 italic underline">Outgoing Synapses (Weights)</h3>
+                        <div id="synapseList" class="space-y-4">
+                            <!-- Dynamic Synapse Inputs -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Help Tooltip -->
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 panel px-4 py-2 rounded-full text-[10px] text-slate-400 flex items-center gap-3">
+            <span class="flex items-center gap-1"><kbd class="bg-white/10 px-1 rounded">Click</kbd> 뉴런 선택</span>
+            <span class="flex items-center gap-1"><kbd class="bg-white/10 px-1 rounded">Drag</kbd> 화면 이동</span>
+            <span class="flex items-center gap-1"><kbd class="bg-white/10 px-1 rounded">Wheel</kbd> 확대/축소</span>
+        </div>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let isPaused = false;
+        let camera = { x: 0, y: 0, zoom: 0.6 };
+        let isDragging = false;
+        let lastMouse = { x: 0, y: 0 };
+        let selectedNeuron = null;
+
+        // Global Sim Params
+        const GLOBAL_SPEED = 3.5;
+
+        class Neuron {
+            constructor(id, type, x, y) {
+                this.id = id;
+                this.type = type; // 'S'(Input), 'E'(Excitatory), 'I'(Inhibitory), 'O'(Output)
+                this.x = x;
+                this.y = y;
+                this.v = 0;
+                this.threshold = 1.0;
+                this.leak = 0.022;
+                this.refractory = 0;
+                this.spiking = false;
+                this.connections = [];
+            }
+
+            update() {
+                if (this.type === 'S') return;
+                if (this.refractory > 0) {
+                    this.refractory--;
+                    this.v = 0;
+                    this.spiking = false;
+                } else {
+                    this.v -= this.v * this.leak;
+                    if (this.v >= this.threshold) this.spike();
+                    else this.spiking = false;
+                }
+            }
+
+            spike() {
+                this.v = 0;
+                this.spiking = true;
+                this.refractory = 12;
+                this.connections.forEach(conn => {
+                    activeSpikes.push(new Spike(this, conn.target, conn.weight, conn.dist));
+                });
+            }
+
+            receiveInput(amount) {
+                if (this.refractory <= 0) {
+                    this.v += amount;
+                    if (this.v < 0) this.v = 0;
+                }
+            }
+        }
+
+        class Spike {
+            constructor(source, target, weight, distance) {
+                this.source = source;
+                this.target = target;
+                this.weight = weight;
+                this.distance = distance;
+                this.progress = 0;
+                this.active = true;
+            }
+            update() {
+                this.progress += GLOBAL_SPEED;
+                if (this.progress >= this.distance) {
+                    this.target.receiveInput(this.weight);
+                    this.active = false;
+                }
+            }
+            draw() {
+                const ratio = this.progress / this.distance;
+                const x = this.source.x + (this.target.x - this.source.x) * ratio;
+                const y = this.source.y + (this.target.y - this.source.y) * ratio;
+                const pos = toScreen(x, y);
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 3 * camera.zoom, 0, Math.PI * 2);
+                ctx.fillStyle = this.weight < 0 ? '#f43f5e' : '#fefce8';
+                ctx.shadowBlur = 10 * camera.zoom;
+                ctx.shadowColor = this.fillStyle;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        let neurons = [];
+        let activeSpikes = [];
+        let outputScores = { A: 0, B: 0, C: 0, D: 0 };
+
+        function initNetwork() {
+            neurons = [];
+            activeSpikes = [];
+            selectedNeuron = null;
+            closeEditor();
+
+            const startX = -700;
+            const stepX = 350;
+
+            // 1. Input Layer (S)
+            const sNodes = [];
+            for(let i=0; i<3; i++) {
+                const n = new Neuron(`IN-${i+1}`, 'S', startX, -200 + i*200);
+                neurons.push(n);
+                sNodes.push(n);
+            }
+
+            // 2. Hidden Layer (E)
+            const hNodes = [];
+            for(let i=0; i<12; i++) {
+                const n = new Neuron(`HID-${i+1}`, 'E', startX + stepX, -400 + i*75);
+                neurons.push(n);
+                hNodes.push(n);
+            }
+
+            // 3. Lateral Inhibition Layer (I)
+            const iNodes = [];
+            for(let i=0; i<4; i++) {
+                const n = new Neuron(`INH-${i+1}`, 'I', startX + stepX * 1.8, -225 + i*150);
+                neurons.push(n);
+                iNodes.push(n);
+            }
+
+            // 4. Output Layer (O)
+            const oNodes = [];
+            const outLabels = ['A', 'B', 'C', 'D'];
+            for(let i=0; i<4; i++) {
+                const n = new Neuron(`OUT-${outLabels[i]}`, 'O', startX + stepX * 2.8, -225 + i*150);
+                neurons.push(n);
+                oNodes.push(n);
+            }
+
+            // Connections
+            const connect = (s, t, w) => {
+                const d = Math.sqrt(Math.pow(s.x-t.x, 2) + Math.pow(s.y-t.y, 2));
+                s.connections.push({ target: t, dist: d, weight: w });
+            };
+
+            // S -> H
+            sNodes.forEach(s => hNodes.forEach(h => {
+                const dy = Math.abs(s.y - h.y);
+                if (dy < 300) connect(s, h, Math.max(0.1, 0.7 - dy/500));
+            }));
+
+            // H -> I & O
+            hNodes.forEach(h => {
+                oNodes.forEach((o, idx) => {
+                    const dy = Math.abs(h.y - o.y);
+                    if (dy < 200) {
+                        connect(h, o, 0.4);
+                        connect(h, iNodes[idx], 0.3);
+                    }
+                });
+            });
+
+            // I -> O (Lateral Inhibition)
+            iNodes.forEach((iNode, idx) => {
+                oNodes.forEach((oNode, oIdx) => {
+                    if (idx !== oIdx) connect(iNode, oNode, -1.8);
+                });
+            });
+
+            renderOutputList();
+        }
+
+        function renderOutputList() {
+            const container = document.getElementById('output-list');
+            container.innerHTML = '';
+            ['A', 'B', 'C', 'D'].forEach(label => {
+                container.innerHTML += `
+                    <div id="stat_${label}">
+                        <div class="flex justify-between text-[10px] mb-1 font-bold">
+                            <span class="text-indigo-400">NEURON OUT-${label}</span>
+                            <span class="val text-white">0%</span>
+                        </div>
+                        <div class="h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                            <div class="bar h-full bg-purple-500 w-0 transition-all duration-75"></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function toScreen(x, y) {
+            return { x: (x - camera.x) * camera.zoom + width / 2, y: (y - camera.y) * camera.zoom + height / 2 };
+        }
+
+        function fromScreen(x, y) {
+            return { x: (x - width / 2) / camera.zoom + camera.x, y: (y - height / 2) / camera.zoom + camera.y };
+        }
+
+        function update() {
+            if (isPaused) return;
+            neurons.forEach(n => n.update());
+            for (let i = activeSpikes.length - 1; i >= 0; i--) {
+                activeSpikes[i].update();
+                if (!activeSpikes[i].active) activeSpikes.splice(i, 1);
+            }
+
+            ['A', 'B', 'C', 'D'].forEach(label => {
+                const n = neurons.find(node => node.id === `OUT-${label}`);
+                if (n && n.spiking) outputScores[label] = Math.min(100, outputScores[label] + 45);
+                outputScores[label] *= 0.95;
+                const el = document.getElementById(`stat_${label}`);
+                if (el) {
+                    el.querySelector('.bar').style.width = outputScores[label] + '%';
+                    el.querySelector('.val').innerText = Math.round(outputScores[label]) + '%';
+                }
+            });
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw Synapses
+            neurons.forEach(n => {
+                const start = toScreen(n.x, n.y);
+                n.connections.forEach(conn => {
+                    const end = toScreen(conn.target.x, conn.target.y);
+                    ctx.beginPath();
+                    ctx.moveTo(start.x, start.y);
+                    ctx.lineTo(end.x, end.y);
+                    const opacity = Math.abs(conn.weight) * 0.15;
+                    ctx.strokeStyle = conn.weight < 0 ? `rgba(244, 63, 94, ${opacity})` : `rgba(255, 255, 255, ${opacity})`;
+                    ctx.lineWidth = Math.abs(conn.weight) * 1.5 * camera.zoom;
+                    ctx.stroke();
+                });
+            });
+
+            activeSpikes.forEach(s => s.draw());
+
+            // Draw Neurons
+            neurons.forEach(n => {
+                const pos = toScreen(n.x, n.y);
+                const isSelected = selectedNeuron === n;
+                const r = (n.type === 'S' || n.type === 'O' ? 16 : 10) * camera.zoom;
+
+                if (isSelected) {
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, r + 6 * camera.zoom, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#10b981';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+                
+                let color = '#334155';
+                if (n.type === 'E') color = `rgba(16, 185, 129, ${0.3 + n.v * 0.7})`;
+                else if (n.type === 'I') color = `rgba(244, 63, 94, ${0.3 + n.v * 0.7})`;
+                else if (n.type === 'S') color = '#3b82f6';
+                else if (n.type === 'O') color = '#a855f7';
+
+                if (n.spiking) {
+                    color = '#ffffff';
+                    ctx.shadowBlur = 25 * camera.zoom;
+                    ctx.shadowColor = '#ffffff';
+                }
+
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = isSelected ? '#fff' : 'rgba(255,255,255,0.15)';
+                ctx.lineWidth = 1 * camera.zoom;
+                ctx.stroke();
+
+                if (camera.zoom > 0.4) {
+                    ctx.fillStyle = isSelected ? '#fff' : 'rgba(255,255,255,0.5)';
+                    ctx.font = `bold ${9 * camera.zoom}px Pretendard`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(n.id, pos.x, pos.y + (4 * camera.zoom));
+                }
+            });
+        }
+
+        function triggerInput(idx) {
+            const targets = neurons.filter(n => n.type === 'S');
+            if (targets[idx]) targets[idx].spike();
+        }
+
+        // Editor Logic
+        function openEditor(neuron) {
+            selectedNeuron = neuron;
+            const panel = document.getElementById('editorPanel');
+            panel.classList.remove('hidden');
+            
+            document.getElementById('editNeuronTitle').innerText = neuron.id;
+            document.getElementById('editNeuronType').innerText = `Role: ${neuron.type === 'S' ? 'Sensor' : neuron.type === 'E' ? 'Excitatory' : neuron.type === 'I' ? 'Inhibitory' : 'Output'}`;
+            
+            const threshInput = document.getElementById('input_threshold');
+            const leakInput = document.getElementById('input_leak');
+            
+            threshInput.value = neuron.threshold;
+            leakInput.value = neuron.leak;
+            document.getElementById('val_threshold').innerText = neuron.threshold.toFixed(2);
+            document.getElementById('val_leak').innerText = neuron.leak.toFixed(3);
+
+            // Update synapse list
+            const synContainer = document.getElementById('synapseList');
+            synContainer.innerHTML = '';
+            
+            if (neuron.connections.length === 0) {
+                synContainer.innerHTML = '<p class="text-[10px] text-slate-600 italic">No outgoing connections.</p>';
+            }
+
+            neuron.connections.forEach((conn, i) => {
+                const item = document.createElement('div');
+                item.className = 'bg-slate-900/40 p-3 rounded-xl border border-white/5';
+                item.innerHTML = `
+                    <div class="flex justify-between text-[9px] mb-2">
+                        <span class="text-slate-400">To: <b class="text-white">${conn.target.id}</b></span>
+                        <span class="text-emerald-400 font-mono weight-label">${conn.weight.toFixed(2)}</span>
+                    </div>
+                    <input type="range" min="-3.0" max="3.0" step="0.05" value="${conn.weight}" class="w-full h-1 synapse-weight-input">
+                `;
+                
+                const range = item.querySelector('.synapse-weight-input');
+                const label = item.querySelector('.weight-label');
+                range.oninput = (e) => {
+                    const val = parseFloat(e.target.value);
+                    conn.weight = val;
+                    label.innerText = val.toFixed(2);
+                };
+                synContainer.appendChild(item);
+            });
+        }
+
+        function closeEditor() {
+            selectedNeuron = null;
+            document.getElementById('editorPanel').classList.add('hidden');
+        }
+
+        // Event Bindings
+        document.getElementById('input_threshold').oninput = (e) => {
+            if (selectedNeuron) {
+                selectedNeuron.threshold = parseFloat(e.target.value);
+                document.getElementById('val_threshold').innerText = selectedNeuron.threshold.toFixed(2);
+            }
+        };
+        document.getElementById('input_leak').oninput = (e) => {
+            if (selectedNeuron) {
+                selectedNeuron.leak = parseFloat(e.target.value);
+                document.getElementById('val_leak').innerText = selectedNeuron.leak.toFixed(3);
+            }
+        };
+
+        canvas.onmousedown = (e) => {
+            const m = { x: e.clientX, y: e.clientY };
+            const worldM = fromScreen(m.x, m.y);
+            
+            // Check Clicked Neuron
+            const clicked = neurons.find(n => {
+                const dx = n.x - worldM.x;
+                const dy = n.y - worldM.y;
+                const r = (n.type === 'S' || n.type === 'O' ? 16 : 10);
+                return Math.sqrt(dx*dx + dy*dy) < r + 5;
+            });
+
+            if (clicked) {
+                openEditor(clicked);
+            } else {
+                isDragging = true;
+                lastMouse = m;
+            }
+        };
+
+        window.onmousemove = (e) => {
+            if (isDragging) {
+                camera.x -= (e.clientX - lastMouse.x) / camera.zoom;
+                camera.y -= (e.clientY - lastMouse.y) / camera.zoom;
+                lastMouse = { x: e.clientX, y: e.clientY };
+            }
+        };
+        window.onmouseup = () => isDragging = false;
+        canvas.onwheel = (e) => {
+            e.preventDefault();
+            const factor = Math.pow(1.1, -e.deltaY / 120);
+            const mBefore = fromScreen(e.clientX, e.clientY);
+            camera.zoom = Math.max(0.1, Math.min(5, camera.zoom * factor));
+            const mAfter = fromScreen(e.clientX, e.clientY);
+            camera.x += (mBefore.x - mAfter.x);
+            camera.y += (mBefore.y - mAfter.y);
+        };
+
+        document.getElementById('pauseBtn').onclick = (e) => {
+            isPaused = !isPaused;
+            e.target.innerText = isPaused ? '재개' : '일시정지';
+            e.target.classList.toggle('bg-blue-600');
+            e.target.classList.toggle('bg-emerald-600');
+        };
+        document.getElementById('resetSimBtn').onclick = initNetwork;
+        document.getElementById('resetViewBtn').onclick = () => camera = { x: 0, y: 0, zoom: 0.6 };
+
+        function resize() { width = canvas.width = canvas.clientWidth; height = canvas.height = canvas.clientHeight; }
+        window.onresize = resize;
+        window.onload = () => { resize(); initNetwork(); (function loop() { update(); draw(); requestAnimationFrame(loop); })(); };
+    </script>
+</body>
+</html>
