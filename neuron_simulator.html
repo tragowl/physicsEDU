@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>뉴런 시뮬레이터</title>
+    <!-- Tailwind CSS for Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React and Babel for rendering -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @keyframes flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+        .animate-flash { animation: flash 0.15s ease-out forwards; }
+        input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #6366f1;
+            margin-top: -6px;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+        .dark input[type="range"]::-webkit-slider-runnable-track {
+            background: #1e293b;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const App = () => {
+            const [isDarkMode, setIsDarkMode] = useState(true);
+            const [membranePotential, setMembranePotential] = useState(-70);
+            const [isFiring, setIsFiring] = useState(false);
+            const [isPlaying, setIsPlaying] = useState(true);
+            const [isRefractory, setIsRefractory] = useState(false);
+            const [weights, setWeights] = useState([1.0, 1.0, 1.0]);
+            
+            const [threshold, setThreshold] = useState(-55);
+            const [restingPotential, setRestingPotential] = useState(-70);
+            const [stimulusStrength, setStimulusStrength] = useState(5.0);
+            const [leakRate, setLeakRate] = useState(0.08);
+            const [refractoryTime, setRefractoryTime] = useState(400);
+            const [history, setHistory] = useState(Array(100).fill(-70));
+            const potentialRef = useRef(-70);
+
+            useEffect(() => { potentialRef.current = membranePotential; }, [membranePotential]);
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    if (!isPlaying) return;
+                    setMembranePotential((prev) => {
+                        let next;
+                        if (prev === 30) { next = restingPotential - 5; } 
+                        else {
+                            next = prev + (restingPotential - prev) * leakRate;
+                            if (Math.abs(next - restingPotential) < 0.1) next = restingPotential;
+                        }
+                        return next;
+                    });
+                    setHistory((prev) => [...prev.slice(1), potentialRef.current]);
+                    if (isFiring) {
+                        setIsFiring(false);
+                        setIsRefractory(true);
+                        setTimeout(() => setIsRefractory(false), refractoryTime);
+                    }
+                }, 50);
+                return () => clearInterval(interval);
+            }, [isPlaying, restingPotential, leakRate, isFiring, refractoryTime]);
+
+            const handleStimulate = (index) => {
+                if (!isPlaying || isFiring || isRefractory) return;
+                const effectiveStimulus = stimulusStrength * weights[index];
+                setMembranePotential(prev => {
+                    const next = prev + effectiveStimulus;
+                    if (next >= threshold) { setIsFiring(true); return 30; }
+                    return next;
+                });
+            };
+
+            const updateWeight = (index, value) => {
+                const newWeights = [...weights];
+                newWeights[index] = parseFloat(value);
+                setWeights(newWeights);
+            };
+
+            const resetSim = () => {
+                setMembranePotential(restingPotential);
+                setHistory(Array(100).fill(restingPotential));
+                setIsFiring(false);
+                setIsRefractory(false);
+                setWeights([1.0, 1.0, 1.0]);
+            };
+
+            const excitationLevel = Math.min(100, Math.max(0, ((membranePotential - restingPotential) / (threshold - restingPotential)) * 100));
+            const themeClasses = isDarkMode ? "bg-slate-950 text-slate-100 dark" : "bg-zinc-50 text-zinc-900";
+            const cardClasses = isDarkMode ? "bg-slate-900 border-slate-800 shadow-xl" : "bg-white border-zinc-200 shadow-md";
+
+            return (
+                <div className={`min-h-screen ${themeClasses} p-4 md:p-8 font-sans transition-colors duration-300`}>
+                    <div className="max-w-6xl mx-auto">
+                        <header className={`mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b ${isDarkMode ? 'border-slate-800' : 'border-zinc-200'} pb-6`}>
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <h1 className={`text-4xl font-black ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'} tracking-tight`}>뉴런 시뮬레이터</h1>
+                                    <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-2 rounded-full border transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-yellow-400' : 'bg-white border-zinc-300 text-slate-600'}`}>
+                                        {isDarkMode ? <i data-lucide="sun"></i> : <i data-lucide="moon"></i>}
+                                    </button>
+                                </div>
+                                <p className={`mt-2 text-lg font-medium ${isDarkMode ? 'text-slate-400' : 'text-zinc-500'}`}>수상돌기를 자극하여 발화 역치를 넘겨 신호를 발생시켜보세요!</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => setIsPlaying(!isPlaying)} className={`p-3 rounded-xl border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-zinc-300'}`}>
+                                    {isPlaying ? <i data-lucide="pause"></i> : <i data-lucide="play"></i>}
+                                </button>
+                                <button onClick={resetSim} className={`p-3 rounded-xl border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-zinc-300'}`}>
+                                    <i data-lucide="rotate-ccw"></i>
+                                </button>
+                            </div>
+                        </header>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="space-y-6">
+                                <div className={`${cardClasses} p-6 rounded-2xl border`}>
+                                    <h2 className={`text-lg font-bold flex items-center gap-2 mb-6 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}><i data-lucide="mouse-pointer-2" size="18"></i> 생물학적 설정</h2>
+                                    <div className="space-y-6">
+                                        <div>
+                                            <div className="flex justify-between mb-2">
+                                                <label className="text-sm opacity-70">기본 자극 강도</label>
+                                                <span className="font-mono font-bold text-yellow-500">+{stimulusStrength.toFixed(1)} mV</span>
+                                            </div>
+                                            <input type="range" min="1" max="15" step="0.5" value={stimulusStrength} onChange={(e) => setStimulusStrength(parseFloat(e.target.value))} className="w-full" />
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between mb-2">
+                                                <label className="text-sm opacity-70 flex items-center gap-1"><i data-lucide="timer" size="14"></i> 불응기 시간</label>
+                                                <span className="font-mono font-bold text-blue-500">{(refractoryTime/1000).toFixed(1)}s</span>
+                                            </div>
+                                            <input type="range" min="100" max="2000" step="100" value={refractoryTime} onChange={(e) => setRefractoryTime(parseInt(e.target.value))} className="w-full" />
+                                        </div>
+                                        <div className={`pt-4 border-t ${isDarkMode ? 'border-slate-800' : 'border-zinc-100'}`}>
+                                            <div className="flex justify-between mb-2">
+                                                <label className="text-sm text-red-500 font-bold">발화 역치 (Threshold)</label>
+                                                <span className="text-red-500 font-mono font-bold">{threshold} mV</span>
+                                            </div>
+                                            <input type="range" min="-65" max="-40" value={threshold} onChange={(e) => setThreshold(parseInt(e.target.value))} className="w-full" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className={`${cardClasses} p-6 rounded-2xl border`}>
+                                    <h3 className="text-xs font-black uppercase mb-4 tracking-widest flex justify-between opacity-50">SOMA EXCITATION {isRefractory && <span className="text-blue-500 animate-pulse">REFRACTORY</span>}</h3>
+                                    <div className="h-4 w-full rounded-full overflow-hidden border bg-slate-200 dark:bg-slate-800 border-zinc-200 dark:border-slate-700">
+                                        <div className={`h-full transition-all duration-100 ${isFiring ? 'bg-white shadow-[0_0_15px_white]' : isRefractory ? 'bg-blue-600' : 'bg-gradient-to-r from-indigo-500 to-red-500'}`} style={{ width: `${isFiring ? 100 : isRefractory ? 0 : excitationLevel}%` }}></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="lg:col-span-2 space-y-6">
+                                <div className={`${cardClasses} rounded-3xl border h-[500px] relative overflow-hidden flex items-center justify-center p-8 transition-colors duration-300`}>
+                                    <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 800 500">
+                                        <defs><filter id="glow"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                                        <path d="M 450 250 L 700 250" stroke={isFiring ? "#fbbf24" : isRefractory ? "#2563eb" : (isDarkMode ? "#1e293b" : "#e4e4e7")} strokeWidth="16" strokeLinecap="round"/>
+                                        <g stroke={isDarkMode ? "#334155" : "#d4d4d8"} strokeWidth="4" strokeLinecap="round" fill="none" opacity="0.6">
+                                            <path d="M 240 130 Q 280 130 320 200" /><path d="M 240 250 L 320 250" /><path d="M 240 370 Q 280 370 320 300" />
+                                        </g>
+                                        {isFiring && <circle r="12" fill={isDarkMode ? "#fff" : "#fbbf24"} filter="url(#glow)"><animateMotion dur="0.25s" path="M 380 250 L 720 250" fill="freeze" /></circle>}
+                                    </svg>
+
+                                    <div className="absolute left-6 flex flex-col gap-12 z-30">
+                                        {[0, 1, 2].map((i) => (
+                                            <div key={i} className={`flex items-center gap-4 p-3 rounded-2xl border backdrop-blur-sm ${isDarkMode ? 'bg-slate-950/50 border-slate-800' : 'bg-white/80 border-zinc-200'}`}>
+                                                <button onClick={() => handleStimulate(i)} disabled={isRefractory || !isPlaying} className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${isRefractory ? 'opacity-20' : 'bg-indigo-600/10 border-indigo-500 text-indigo-500 hover:scale-110 active:scale-95 hover:bg-indigo-500 hover:text-white shadow-lg'}`}>
+                                                    <i data-lucide="activity" size="18"></i>
+                                                </button>
+                                                <div className="flex flex-col w-24">
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className="text-[10px] font-bold opacity-50 uppercase">시냅스 {i+1}</span>
+                                                        <span className={`text-[10px] font-mono font-bold ${weights[i] > 1 ? 'text-orange-500' : weights[i] < 1 ? 'text-blue-500' : ''}`}>x{weights[i].toFixed(1)}</span>
+                                                    </div>
+                                                    <input type="range" min="0.1" max="1.5" step="0.1" value={weights[i]} onChange={(e) => updateWeight(i, e.target.value)} className="w-full" />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="relative z-20 flex flex-col items-center left-12">
+                                        <div className={`w-44 h-44 rounded-full border-4 flex items-center justify-center transition-all duration-150 relative overflow-hidden ${isFiring ? 'bg-yellow-400 border-white scale-110 shadow-[0_0_100px_rgba(250,204,21,0.6)]' : isRefractory ? 'bg-blue-100 border-blue-600 dark:bg-slate-900 dark:border-blue-900' : 'bg-white border-indigo-500 dark:bg-slate-800 shadow-2xl'}`}>
+                                            <div className={`w-8 h-8 rounded-full z-10 ${isFiring ? 'bg-white' : isRefractory ? 'bg-blue-600' : 'bg-indigo-500'}`}></div>
+                                            {!isFiring && !isRefractory && <div className="absolute bottom-0 left-0 w-full bg-indigo-500/30 transition-all duration-300 pointer-events-none" style={{ height: `${excitationLevel}%` }}></div>}
+                                        </div>
+                                        <div className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Soma (Cell Body)</div>
+                                    </div>
+
+                                    <div className="absolute right-12 flex flex-col items-center gap-2">
+                                        <div className={`w-12 h-24 rounded-full border-4 transition-all duration-300 ${isFiring ? 'bg-yellow-400 border-white scale-125 shadow-[0_0_40px_yellow]' : isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-zinc-100 border-zinc-200'}`}></div>
+                                        <span className="text-[10px] font-bold opacity-40 text-center uppercase">Axon Terminal</span>
+                                    </div>
+                                </div>
+
+                                <div className={`p-5 rounded-2xl border h-48 relative shadow-inner overflow-hidden ${isDarkMode ? 'bg-black border-slate-800' : 'bg-zinc-900 border-zinc-300'}`}>
+                                    <div className="absolute top-4 left-4 text-[10px] text-zinc-500 font-mono uppercase z-20 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div> LIVE OSCILLOSCOPE
+                                    </div>
+                                    <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
+                                        <line x1="0" y1="70" x2="100" y2="70" stroke="#334155" strokeWidth="0.5" />
+                                        <line x1="0" y1="55" x2="100" y2="55" stroke="#ef4444" strokeWidth="0.5" strokeDasharray="1,1" />
+                                        <polyline fill="none" stroke={membranePotential > threshold ? "#fbbf24" : isRefractory ? "#3b82f6" : "#22c55e"} strokeWidth="1" points={history.map((val, i) => `${i},${100 - (val + 100) * 0.8}`).join(' ')} />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
+                            <div className={`${cardClasses} p-6 rounded-2xl border`}>
+                                <h3 className={`font-bold flex items-center gap-2 mb-4 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}><i data-lucide="info"></i> 뉴런의 작동 원리와 실무율</h3>
+                                <ul className="text-sm space-y-3 opacity-80 leading-relaxed">
+                                    <li>• <strong>뉴런의 신호 전달:</strong> 수상돌기에서 받은 자극이 세포체에서 통합되어 특정 수치(역치)를 넘으면 전기 신호가 발생합니다.</li>
+                                    <li>• <strong>실무율(All-or-None Law):</strong> 자극이 역치보다 작으면 반응이 없고, 역치를 넘기만 하면 자극의 세기와 관계없이 항상 동일한 크기의 활동 전위가 발생합니다.</li>
+                                    <li>• <strong>이온의 이동:</strong> 나트륨(Na+) 이온이 세포 안으로 급격히 들어오며 탈분극(+30mV)이 일어나고, 다시 칼륨(K+) 이온이 나가며 복구됩니다.</li>
+                                </ul>
+                            </div>
+                            <div className={`${cardClasses} p-6 rounded-2xl border`}>
+                                <h3 className={`font-bold flex items-center gap-2 mb-4 text-orange-500`}><i data-lucide="sliders"></i> 불응기와 시냅스 가중치</h3>
+                                <ul className="text-sm space-y-3 opacity-80 leading-relaxed">
+                                    <li>• <strong>불응기(Refractory Period):</strong> 한 번 신호를 보낸 뉴런은 짧은 시간 동안 다시 발화할 수 없는 휴식기를 가집니다. 이는 신호가 거꾸로 흐르는 것을 방지합니다.</li>
+                                    <li>• <strong>시냅스 가중치:</strong> 시냅스에서의 자극 전달 효율은 학습과 경험에 따라 달라집니다. 가중치가 높으면 적은 자극으로도 쉽게 정보를 전달합니다.</li>
+                                    <li>• <strong>전위 누설(Leak):</strong> 가만히 두면 뉴런의 전위는 서서히 원래의 안정한 상태(휴지 전위, -70mV)로 되돌아가려 합니다.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <footer className={`mt-8 pt-8 border-t flex flex-col md:flex-row justify-between items-start md:items-center gap-6 ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-zinc-200 text-zinc-400'}`}>
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2 text-sm font-bold">© 2026. 김현석 All rights reserved.</div>
+                                <div className="flex items-center gap-2 text-xs">연락처: tragowl@onedu.jje.go.kr</div>
+                            </div>
+                            <div className="max-w-md text-[11px] leading-tight italic">
+                                ※ 본 시뮬레이터는 교육용 목적으로 제작되었으며, 영리 목적의 무단 사용을 금합니다. 실제 생물학적 뉴런의 거동을 단순화하여 모델링하였습니다.
+                            </div>
+                        </footer>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+        
+        // Initialize Lucide icons after React render
+        setTimeout(() => lucide.createIcons(), 500);
+        // Also update icons whenever light/dark mode changes
+        window.addEventListener('click', () => setTimeout(() => lucide.createIcons(), 10));
+    </script>
+</body>
+</html>
