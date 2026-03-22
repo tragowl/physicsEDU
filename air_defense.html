@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Defense Simulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap');
+        body { background-color: #f1f5f9; font-family: 'Pretendard', sans-serif; color: #1e293b; }
+        .card { background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0; }
+        canvas { 
+            background: linear-gradient(to bottom, #f0f9ff 0%, #e0f2fe 100%); 
+            border-radius: 0.75rem;
+            width: 100%;
+            height: auto;
+            touch-action: none;
+        }
+        .label-red { color: #ef4444; font-weight: 700; font-size: 0.875rem; }
+        .label-blue { color: #3b82f6; font-weight: 700; font-size: 0.875rem; }
+        .input-field { 
+            width: 100%; 
+            background: #f8fafc; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 0.5rem; 
+            padding: 0.4rem 0.6rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus { border-color: #3b82f6; }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+    <div class="max-w-[1400px] mx-auto">
+        <header class="mb-6 flex justify-between items-end">
+            <div>
+                <h1 class="text-3xl font-800 text-slate-800 tracking-tight">Air Defense</h1>
+                <p class="text-slate-500 text-sm">탄도 미사일 요격 및 궤적 분석 시스템</p>
+            </div>
+            <div class="text-right text-[10px] text-slate-400 leading-relaxed">
+                <p>© 2026. 김현석 All rights reserved.</p>
+                <p>연락처: tragowl@onedu.jje.go.kr</p>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- 설정 패널 -->
+            <div class="lg:col-span-3 space-y-4">
+                <div class="card p-5 space-y-6">
+                    <!-- 적 미사일 설정 -->
+                    <div>
+                        <h3 class="flex items-center gap-2 mb-3">
+                            <span class="w-2 h-5 bg-red-500 rounded-full"></span>
+                            <span class="font-bold text-slate-700">적 미사일 (Target)</span>
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="label-red uppercase block mb-1">초기 속력 (m/s)</label>
+                                <input type="number" id="v1" value="120" class="input-field">
+                            </div>
+                            <div>
+                                <label class="label-red uppercase block mb-1">발사 각도 (deg)</label>
+                                <input type="number" id="theta1" value="45" class="input-field">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <!-- 요격 시스템 설정 -->
+                    <div>
+                        <h3 class="flex items-center gap-2 mb-3">
+                            <span class="w-2 h-5 bg-blue-500 rounded-full"></span>
+                            <span class="font-bold text-slate-700">요격 시스템 (Battery)</span>
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="label-blue uppercase block mb-1">설치 위치 (X좌표, m)</label>
+                                <input type="number" id="startX2" value="1000" class="input-field">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="label-blue uppercase block mb-1">속력 (m/s)</label>
+                                    <input type="number" id="v2" value="150" class="input-field">
+                                </div>
+                                <div>
+                                    <label class="label-blue uppercase block mb-1">각도 (deg)</label>
+                                    <input type="number" id="theta2" value="135" class="input-field">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="label-blue uppercase block mb-1">발사 지연 (초)</label>
+                                <input type="number" id="delay" value="2.0" step="0.1" class="input-field">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <!-- 환경 설정 -->
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase block mb-1">중력 가속도 (m/s²)</label>
+                            <input type="number" id="gravity" value="9.8" step="0.1" class="input-field">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase flex justify-between mb-1">
+                                <span>요격 유효 반경</span>
+                                <span id="radiusVal" class="text-blue-600">5.0m</span>
+                            </label>
+                            <input type="range" id="threshold" min="0.5" max="20" step="0.5" value="5.0" class="w-full accent-blue-600">
+                        </div>
+                    </div>
+
+                    <button id="runBtn" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95">
+                        시뮬레이션 가동
+                    </button>
+                    
+                    <p class="text-[9px] text-slate-400 text-center leading-tight">
+                        ※ 본 시뮬레이터는 교육용 목적으로 제작되었으며,<br>영리 목적의 무단 사용을 금합니다.
+                    </p>
+                </div>
+            </div>
+
+            <!-- 메인 캔버스 및 정보창 -->
+            <div class="lg:col-span-9 space-y-4">
+                <!-- 요약 정보 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="card p-4">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">상대 거리</p>
+                        <p class="text-2xl font-800 text-slate-700"><span id="curDist">---</span><span class="text-sm ml-1 font-normal">m</span></p>
+                    </div>
+                    <div class="card p-4">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">최근접 거리</p>
+                        <p class="text-2xl font-800 text-red-500"><span id="minDist">---</span><span class="text-sm ml-1 font-normal">m</span></p>
+                    </div>
+                    <div class="card p-4">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">경과 시간</p>
+                        <p class="text-2xl font-800 text-blue-600"><span id="timer">0.00</span><span class="text-sm ml-1 font-normal">s</span></p>
+                    </div>
+                    <div id="statusCard" class="card p-4 flex items-center justify-center">
+                        <span id="statusText" class="font-800 text-slate-400 uppercase">Standby</span>
+                    </div>
+                </div>
+
+                <!-- 캔버스 영역 -->
+                <div class="card p-2 bg-white relative">
+                    <canvas id="mainCanvas"></canvas>
+                    <div class="absolute bottom-6 right-6 bg-white/80 backdrop-blur p-2 rounded text-[10px] border border-slate-200" id="scaleInfo">
+                        GRID: 100m Interval | SCALE: Auto
+                    </div>
+                </div>
+
+                <!-- 시스템 로그 -->
+                <div class="card p-4 bg-slate-50 border-dashed border-2">
+                    <h4 class="text-xs font-bold text-slate-500 mb-2 uppercase">System Log</h4>
+                    <div id="logContent" class="text-xs font-mono text-slate-600 space-y-1 h-24 overflow-y-auto">
+                        > 시스템 준비 완료. 파라미터를 입력하고 발사 버튼을 누르십시오.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const runBtn = document.getElementById('runBtn');
+        const logContent = document.getElementById('logContent');
+        const thresholdInput = document.getElementById('threshold');
+        const radiusVal = document.getElementById('radiusVal');
+
+        // 상태 변수
+        let animationId = null;
+        let t = 0;
+        let minD = Infinity;
+        let hasHit = false;
+        
+        const margin = 60;
+        let scale = 0.5; 
+
+        function addLog(msg, color = 'text-slate-600') {
+            const div = document.createElement('div');
+            div.className = color;
+            div.innerHTML = `> ${msg}`;
+            logContent.appendChild(div);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        function initCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth - 16;
+            canvas.height = 550;
+            drawBase();
+        }
+
+        /**
+         * 보호 시설(Target Facility) 그래픽 드로잉
+         */
+        function drawFacility(x) {
+            const px = margin + x * scale;
+            const py = canvas.height - margin;
+            
+            ctx.save();
+            ctx.translate(px, py);
+            
+            // 시설 본체 (강화 벙커 느낌)
+            ctx.fillStyle = '#475569';
+            ctx.beginPath();
+            ctx.moveTo(-25, 0);
+            ctx.lineTo(-20, -15);
+            ctx.lineTo(20, -15);
+            ctx.lineTo(25, 0);
+            ctx.fill();
+            
+            // 2층 구조물
+            ctx.fillStyle = '#64748b';
+            ctx.fillRect(-12, -22, 24, 7);
+            
+            // 안테나 타워
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(-15, -15);
+            ctx.lineTo(-15, -35);
+            ctx.stroke();
+            
+            // 안테나 접시
+            ctx.beginPath();
+            ctx.arc(-15, -35, 4, Math.PI, 0);
+            ctx.stroke();
+
+            // 보호 구역 표시
+            ctx.fillStyle = '#059669';
+            ctx.font = 'bold 10px Pretendard';
+            ctx.textAlign = 'center';
+            ctx.fillText('PROTECT', 0, -45);
+            
+            ctx.restore();
+        }
+
+        function drawLauncher(x, color, isTarget) {
+            const px = margin + x * scale;
+            const py = canvas.height - margin;
+            
+            ctx.save();
+            ctx.translate(px, py);
+            
+            if (isTarget) {
+                // 적 이동식 발사대 (TEL)
+                ctx.fillStyle = '#334155';
+                for(let i=-18; i<=10; i+=10) {
+                    ctx.beginPath(); ctx.arc(i, -3, 3, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.fillStyle = color;
+                ctx.fillRect(-22, -15, 35, 12);
+                ctx.fillRect(13, -13, 10, 10);
+                ctx.rotate(-Math.PI / 6);
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(-15, -20, 30, 6);
+            } else {
+                // 방공망 패트리어트 포대
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-15, 0); ctx.lineTo(-10, -10);
+                ctx.moveTo(15, 0); ctx.lineTo(10, -10);
+                ctx.stroke();
+                ctx.fillStyle = color;
+                ctx.fillRect(-18, -12, 36, 6);
+                ctx.fillStyle = '#64748b';
+                ctx.fillRect(-10, -18, 20, 6);
+                ctx.rotate(Math.PI / 4);
+                ctx.fillStyle = color;
+                ctx.fillRect(-15, -15, 25, 10);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(-15, -15, 25, 10);
+            }
+            ctx.restore();
+        }
+
+        function drawBase() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const v1 = parseFloat(document.getElementById('v1').value) || 0;
+            const th1 = (parseFloat(document.getElementById('theta1').value) || 0) * Math.PI / 180;
+            const g = parseFloat(document.getElementById('gravity').value) || 9.8;
+            const startX2 = parseFloat(document.getElementById('startX2').value) || 0;
+            
+            // 예상 낙하 지점 계산 (R = v^2 * sin(2*theta) / g)
+            const expectedImpactX = (v1 * v1 * Math.sin(2 * th1)) / g;
+
+            // 격자 및 축 생략 (이전 버전과 동일)
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            ctx.font = '10px Pretendard';
+            ctx.fillStyle = '#94a3b8';
+            const gridStep = 100;
+            for (let x = 0; x <= 5000; x += gridStep) {
+                const px = margin + x * scale;
+                if (px > canvas.width) break;
+                ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, canvas.height - margin); ctx.stroke();
+                if (x % 500 === 0) ctx.fillText(x + 'm', px - 10, canvas.height - margin + 20);
+            }
+            for (let y = 0; y <= 3000; y += gridStep) {
+                const py = canvas.height - margin - y * scale;
+                if (py < 0) break;
+                ctx.beginPath(); ctx.moveTo(margin, py); ctx.lineTo(canvas.width, py); ctx.stroke();
+                if (y % 500 === 0) ctx.fillText(y + 'm', margin - 45, py + 4);
+            }
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(margin, 0); ctx.lineTo(margin, canvas.height - margin); ctx.lineTo(canvas.width, canvas.height - margin); ctx.stroke();
+            const groundGrad = ctx.createLinearGradient(0, canvas.height - margin, 0, canvas.height);
+            groundGrad.addColorStop(0, '#cbd5e1'); groundGrad.addColorStop(1, '#94a3b8');
+            ctx.fillStyle = groundGrad; ctx.fillRect(0, canvas.height - margin, canvas.width, margin);
+
+            // 중요 시설 그리기 (계산된 위치에)
+            drawFacility(expectedImpactX);
+
+            // 발사대 그리기
+            drawLauncher(0, '#991b1b', true); 
+            drawLauncher(startX2, '#1e40af', false); 
+        }
+
+        function drawObject(x, y, color, label) {
+            const px = margin + x * scale;
+            const py = canvas.height - margin - y * scale;
+            if (px < margin || px > canvas.width || py > canvas.height - margin) return;
+            ctx.save();
+            ctx.translate(px, py);
+            ctx.shadowBlur = 15; ctx.shadowColor = color;
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.font = '800 10px Pretendard'; ctx.fillText(label, 10, -5);
+            ctx.restore();
+        }
+
+        function run() {
+            if (animationId) cancelAnimationFrame(animationId);
+
+            const v1 = parseFloat(document.getElementById('v1').value) || 0;
+            const th1 = (parseFloat(document.getElementById('theta1').value) || 0) * Math.PI / 180;
+            const startX2 = parseFloat(document.getElementById('startX2').value) || 0;
+            const v2 = parseFloat(document.getElementById('v2').value) || 0;
+            const th2 = (parseFloat(document.getElementById('theta2').value) || 0) * Math.PI / 180;
+            const delay = parseFloat(document.getElementById('delay').value) || 0;
+            const g = parseFloat(document.getElementById('gravity').value) || 9.8;
+            const hitR = parseFloat(document.getElementById('threshold').value) || 5;
+
+            // 예상 낙하지점 재계산 (로그용)
+            const expectedImpactX = (v1 * v1 * Math.sin(2 * th1)) / g;
+
+            const maxRange = Math.max(expectedImpactX, startX2) + 300;
+            scale = (canvas.width - margin * 2) / maxRange;
+            if (scale > 1.5) scale = 1.5;
+
+            t = 0; minD = Infinity; hasHit = false;
+            const traj1 = []; const traj2 = [];
+
+            document.getElementById('statusText').innerText = "In Flight";
+            document.getElementById('statusText').className = "font-800 text-orange-500 uppercase animate-pulse";
+            document.getElementById('minDist').innerText = "---";
+            addLog(`시뮬레이션 가동. 표적 예상 위치: ${expectedImpactX.toFixed(1)}m`, 'text-slate-800 font-bold');
+
+            function animate() {
+                drawBase();
+                let x1 = v1 * Math.cos(th1) * t;
+                let y1 = v1 * Math.sin(th1) * t - 0.5 * g * t * t;
+                let x2 = startX2, y2 = 0;
+                if (t >= delay) {
+                    let t2 = t - delay;
+                    x2 = startX2 + v2 * Math.cos(th2) * t2;
+                    y2 = v2 * Math.sin(th2) * t2 - 0.5 * g * t2 * t2;
+                }
+
+                if (y1 >= -10) traj1.push({x: x1, y: y1});
+                if (y2 >= -10 && t >= delay) traj2.push({x: x2, y: y2});
+
+                if(traj1.length > 1) {
+                    ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)'; ctx.lineWidth = 2;
+                    ctx.beginPath(); traj1.forEach((p, i) => {
+                        const px = margin + p.x * scale; const py = canvas.height - margin - p.y * scale;
+                        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                    }); ctx.stroke();
+                }
+                if(traj2.length > 1) {
+                    ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)'; ctx.lineWidth = 2;
+                    ctx.beginPath(); traj2.forEach((p, i) => {
+                        const px = margin + p.x * scale; const py = canvas.height - margin - p.y * scale;
+                        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                    }); ctx.stroke();
+                }
+
+                if (y1 >= 0 && !hasHit) drawObject(x1, y1, '#ef4444', 'SCUD');
+                if (y2 >= 0 && !hasHit && t >= delay) drawObject(x2, y2, '#3b82f6', 'PAC-3');
+
+                if (y1 >= 0 && y2 >= 0 && !hasHit && t >= delay) {
+                    const dist = Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
+                    document.getElementById('curDist').innerText = dist.toFixed(1);
+                    if (dist < minD) { minD = dist; document.getElementById('minDist').innerText = minD.toFixed(2); }
+                    if (dist <= hitR) {
+                        hasHit = true;
+                        document.getElementById('statusText').innerText = "Intercepted";
+                        document.getElementById('statusText').className = "font-800 text-green-600 uppercase";
+                        addLog(`요격 성공! 고도 ${y1.toFixed(1)}m. 시설을 방어했습니다.`, 'text-green-600 font-bold');
+                        for(let r=10; r<40; r+=10) {
+                            ctx.beginPath(); ctx.fillStyle = r > 20 ? 'rgba(251, 191, 36, 0.3)' : '#fbbf24';
+                            ctx.arc(margin + x1 * scale, canvas.height - margin - y1 * scale, r, 0, Math.PI * 2); ctx.fill();
+                        }
+                        cancelAnimationFrame(animationId); return;
+                    }
+                }
+
+                document.getElementById('timer').innerText = t.toFixed(2);
+                t += 0.05; 
+
+                if (t > 100 || (y1 < -2 && (y2 < -2 || t < delay))) {
+                    if(!hasHit) {
+                        document.getElementById('statusText').innerText = "Missed";
+                        document.getElementById('statusText').className = "font-800 text-red-500 uppercase";
+                        const impactDist = Math.abs(x1 - expectedImpactX);
+                        if (impactDist < 30) {
+                            addLog(`요격 실패! 중요 시설이 파괴되었습니다.`, 'text-red-600 font-bold');
+                        } else {
+                            addLog(`요격 실패. 미사일이 표적 외 구역에 낙하함.`, 'text-red-400');
+                        }
+                    }
+                    cancelAnimationFrame(animationId); return;
+                }
+                animationId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        thresholdInput.addEventListener('input', (e) => { radiusVal.innerText = e.target.value + 'm'; });
+        window.addEventListener('resize', initCanvas);
+        window.onload = initCanvas;
+        runBtn.addEventListener('click', run);
+    </script>
+</body>
+</html>
