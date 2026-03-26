@@ -41,7 +41,12 @@
             <button onclick="toggleRaster()" class="px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded text-xs font-bold hover:bg-amber-100 transition">분석 도구</button>
             <div class="h-4 w-[1px] bg-slate-200 mx-1"></div>
             <button onclick="addNeuron()" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-xs font-bold hover:bg-blue-100 transition">뉴런 추가</button>
+            
+            <!-- File Controls -->
             <button onclick="exportData()" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-semibold hover:bg-slate-50 transition">구조 저장</button>
+            <button onclick="triggerFileInput()" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-semibold hover:bg-slate-50 transition text-emerald-600">구조 불러오기</button>
+            <input type="file" id="importFile" class="hidden" accept=".txt,.json" onchange="handleFileImport(event)">
+
             <button id="simToggle" class="px-4 py-1 bg-slate-800 text-white rounded text-xs font-bold hover:bg-slate-900 transition">시뮬레이션 중지</button>
         </div>
     </header>
@@ -107,7 +112,7 @@
 
         <div class="footer-info flex justify-between items-center">
             <div><span class="font-bold">© 2026. SNN Lab</span> | Data Analysis Edition</div>
-            <div class="italic text-slate-400 hidden md:block">CSV 추출을 통해 스파이크 시계열과 네트워크 연결 강도를 분석할 수 있습니다.</div>
+            <div class="italic text-slate-400 hidden md:block">구조 저장 및 불러오기를 통해 설계한 SNN을 언제든 다시 실험할 수 있습니다.</div>
         </div>
     </main>
 
@@ -210,7 +215,71 @@
             }
         }
 
-        // --- CSV Analysis Export (수정된 부분) ---
+        // --- File I/O Logic ---
+        function exportData() {
+            const data = { 
+                typeCounters, 
+                neurons: neurons.map(n => ({ 
+                    id: n.id, 
+                    x: n.x, 
+                    y: n.y, 
+                    type: n.type, 
+                    threshold: n.threshold, 
+                    leak: n.leak, 
+                    connections: n.connections 
+                })) 
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'text/plain' });
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = `snn_structure_${new Date().getTime()}.txt`; 
+            a.click();
+        }
+
+        function triggerFileInput() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    importData(data);
+                } catch (err) {
+                    console.error("파일 파싱 에러:", err);
+                    alert("잘못된 파일 형식입니다.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset for same file re-import
+        }
+
+        function importData(data) {
+            // 1. Reset current state
+            neurons = [];
+            spikes = [];
+            spikeHistory = [];
+            currentTime = 0;
+            typeCounters = data.typeCounters || { E: 1, I: 1, IO: 1 };
+
+            // 2. Create Neurons
+            data.neurons.forEach(nD => {
+                const n = new Neuron(nD.x, nD.y, nD.type, nD.id);
+                n.threshold = nD.threshold || 1.0;
+                n.leak = nD.leak || 0.05;
+                n.connections = nD.connections || [];
+                neurons.push(n);
+            });
+
+            closePanel();
+            console.log("네트워크 로드 완료:", neurons.length, "뉴런");
+        }
+
+        // --- CSV Analysis Export ---
         function toggleRecording() {
             const btn = document.getElementById('recordBtn');
             const csvBtn = document.getElementById('downloadCsvBtn');
@@ -223,8 +292,6 @@
                 btn.innerText = "측정 종료";
                 btn.classList.replace('bg-white', 'bg-red-500');
                 btn.classList.replace('text-slate-700', 'text-white');
-                
-                // 비활성화 상태 유지 (기록중일땐 저장 불가)
                 csvBtn.disabled = true;
                 csvBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 indicator.classList.remove('hidden');
@@ -234,8 +301,6 @@
                 btn.innerText = "측정 시작";
                 btn.classList.replace('bg-red-500', 'bg-white');
                 btn.classList.replace('text-white', 'text-slate-700');
-                
-                // 측정 종료 후 저장 버튼 활성화
                 csvBtn.disabled = false;
                 csvBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200', 'text-slate-400');
                 csvBtn.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600', 'cursor-pointer');
@@ -250,8 +315,6 @@
             }
 
             let csvRows = [];
-            
-            // 1. Spikes Section
             csvRows.push("=== SPIKE TIME SERIES ===");
             csvRows.push("Time_Tick,Neuron_ID,Type,Relative_Time_ms");
             recordedSpikes.forEach(s => {
@@ -259,14 +322,12 @@
                 csvRows.push(`${s.time},${s.neuronId},${s.type},${relativeTime}`);
             });
 
-            // 2. Network Metadata Section
             csvRows.push("\n=== NETWORK STRUCTURE ===");
             csvRows.push("Neuron_ID,Type,Threshold,Leak");
             neurons.forEach(n => {
                 csvRows.push(`${n.id},${n.type},${n.threshold},${n.leak}`);
             });
 
-            // 3. Connectivity Section
             csvRows.push("\n=== SYNAPSE WEIGHTS ===");
             csvRows.push("Source_ID,Target_ID,Weight");
             neurons.forEach(n => {
@@ -276,11 +337,8 @@
             });
 
             const csvString = csvRows.join("\n");
-            // BOM 추가 (Excel 한글 깨짐 방지)
             const BOM = "\uFEFF";
             const blob = new Blob([BOM + csvString], { type: 'text/csv;charset=utf-8;' });
-            
-            // 파일 다운로드 실행
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.setAttribute("href", url);
@@ -288,8 +346,6 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
-            // 메모리 해제
             setTimeout(() => URL.revokeObjectURL(url), 100);
         }
 
@@ -473,12 +529,6 @@
             neurons.push(new Neuron(pos.x, pos.y));
         }
 
-        function exportData() {
-            const data = { typeCounters, neurons: neurons.map(n => ({ id: n.id, x: n.x, y: n.y, type: n.type, threshold: n.threshold, leak: n.leak, connections: n.connections })) };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'text/plain' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `snn_structure.txt`; a.click();
-        }
-
         function init() {
             typeCounters = { E: 1, I: 1, IO: 1 };
             camera = { x: 0, y: 0, zoom: 1 };
@@ -556,6 +606,11 @@
             height = canvas.height = window.innerHeight - 56;
             init();
             (function loop() { updateSim(); draw(); requestAnimationFrame(loop); })();
+        };
+
+        window.onresize = () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight - 56;
         };
 
         document.getElementById('simToggle').onclick = (e) => {
