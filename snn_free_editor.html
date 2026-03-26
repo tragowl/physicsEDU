@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SNN 자유 에디터</title>
+    <title>SNN 자유 에디터 Pro + Data Analyzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
@@ -12,9 +12,12 @@
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
         .node-panel { position: absolute; width: 240px; z-index: 100; display: none; pointer-events: auto; }
         input[type=range] { accent-color: #3b82f6; cursor: pointer; }
-        .instruction-badge { background: #fff; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; color: #64748b; }
-        .key-hint { background: #e2e8f0; padding: 1px 4px; border-radius: 4px; font-family: monospace; color: #1e293b; }
         .footer-info { position: absolute; bottom: 0; left: 0; width: 100%; padding: 12px 24px; background: rgba(255,255,255,0.7); font-size: 11px; color: #64748b; border-top: 1px solid rgba(0,0,0,0.05); }
+        #rasterPanel { position: absolute; bottom: 80px; right: 24px; width: 400px; height: 220px; z-index: 50; display: none; overflow: hidden; }
+        #rasterCanvas { background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .rec-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .animate-pulse-fast { animation: pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col select-none">
@@ -22,16 +25,23 @@
     <!-- Header -->
     <header class="h-14 flex justify-between items-center px-6 bg-white border-b border-slate-200 z-10">
         <div class="flex items-center gap-4">
-            <h1 class="font-bold text-slate-800 text-lg">SNN 자유 에디터</h1>
-            <div class="hidden md:flex gap-2">
-                <span class="instruction-badge">클릭: 자극</span>
-                <span class="instruction-badge"><span class="key-hint">Alt</span> + 클릭: 설정창</span>
-                <span class="instruction-badge">가장자리 드래그: 연결</span>
+            <h1 class="font-bold text-slate-800 text-lg">SNN Pro <span class="text-blue-500">Analyzer</span></h1>
+            <div id="recordingIndicator" class="hidden items-center px-3 py-1 bg-red-50 text-red-600 rounded-full text-[10px] font-black border border-red-100">
+                <span class="rec-dot animate-pulse-fast"></span> RECORDING DATA...
             </div>
         </div>
-        <div class="flex gap-2">
+        
+        <div class="flex gap-2 items-center">
+            <!-- Recording Controls -->
+            <div class="flex bg-slate-100 p-1 rounded-lg gap-1 mr-2">
+                <button id="recordBtn" onclick="toggleRecording()" class="px-3 py-1 bg-white text-slate-700 border border-slate-200 rounded text-xs font-bold hover:bg-slate-50 transition shadow-sm">측정 시작</button>
+                <button id="downloadCsvBtn" onclick="exportCSV()" class="px-3 py-1 bg-slate-200 text-slate-400 border border-slate-300 rounded text-xs font-bold transition opacity-50 cursor-not-allowed" disabled>CSV 분석 저장</button>
+            </div>
+
+            <button onclick="toggleRaster()" class="px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded text-xs font-bold hover:bg-amber-100 transition">분석 도구</button>
+            <div class="h-4 w-[1px] bg-slate-200 mx-1"></div>
             <button onclick="addNeuron()" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-xs font-bold hover:bg-blue-100 transition">뉴런 추가</button>
-            <button id="resetBtn" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-semibold hover:bg-slate-50 transition">초기화</button>
+            <button onclick="exportData()" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-semibold hover:bg-slate-50 transition">구조 저장</button>
             <button id="simToggle" class="px-4 py-1 bg-slate-800 text-white rounded text-xs font-bold hover:bg-slate-900 transition">시뮬레이션 중지</button>
         </div>
     </header>
@@ -39,13 +49,25 @@
     <main class="flex-1 relative overflow-hidden bg-[#f1f5f9]">
         <canvas id="simCanvas"></canvas>
 
-        <!-- Node/Synapse Property Editor -->
+        <!-- Raster Plot Panel -->
+        <div id="rasterPanel" class="glass p-3 rounded-xl">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-[10px] font-black uppercase text-amber-600">Raster Plot (Real-time)</span>
+                <button onclick="toggleRaster()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <canvas id="rasterCanvas" width="376" height="170"></canvas>
+            <div class="flex justify-between mt-1 text-[8px] text-slate-400 font-mono">
+                <span>-300 Frames</span>
+                <span>Now</span>
+            </div>
+        </div>
+
+        <!-- Property Editor -->
         <div id="propPanel" class="node-panel glass p-4 rounded-xl" onmousedown="event.stopPropagation()">
             <div class="flex justify-between items-center mb-4">
                 <span id="propTitle" class="text-[10px] font-black uppercase text-blue-600">Neuron Setting</span>
                 <button onclick="closePanel()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
             </div>
-            
             <div id="neuronControls" class="space-y-4">
                 <div>
                     <label class="text-[10px] font-bold text-slate-500 block mb-1">뉴런 유형</label>
@@ -65,7 +87,6 @@
                 </div>
                 <button onclick="deleteSelected()" class="w-full py-2 mt-2 bg-red-50 text-red-500 text-[10px] font-bold rounded border border-red-100 hover:bg-red-100 transition">요소 삭제</button>
             </div>
-
             <div id="synapseControls" class="space-y-4 hidden">
                 <div>
                     <div class="flex justify-between"><label class="text-[10px] font-bold text-slate-500 mb-1">연결 강도 (Weight)</label><span id="val_weight" class="text-[10px] font-mono text-slate-400">0.8</span></div>
@@ -76,23 +97,17 @@
         </div>
 
         <!-- Legend -->
-        <div class="absolute bottom-16 left-6 flex gap-4 pointer-events-none">
+        <div class="absolute bottom-16 left-6 flex flex-col gap-2 pointer-events-none">
             <div class="glass px-4 py-2 rounded-lg text-[10px] font-bold text-slate-500 flex items-center gap-4">
-                <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div> 흥분 (E)</div>
-                <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-red-500"></div> 억제 (I)</div>
-                <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-slate-400"></div> 입출력 (IO)</div>
+                <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div> 흥분</div>
+                <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-red-500"></div> 억제</div>
+                <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-slate-400"></div> 입출력</div>
             </div>
         </div>
 
-        <!-- Footer Info -->
-        <div class="footer-info flex flex-col md:flex-row justify-between gap-2">
-            <div>
-                <span class="font-bold">© 2026. 김현석</span> All rights reserved. 
-                <span class="ml-2 font-medium">연락처: <a href="mailto:tragowl@onedu.jje.go.kr" class="underline hover:text-blue-600">tragowl@onedu.jje.go.kr</a></span>
-            </div>
-            <div class="italic text-slate-400">
-                ※ 본 시뮬레이터는 교육용 목적으로 제작되었으며, 영리 목적의 무단 사용을 금합니다. 실제 생물학적 뉴런의 거동을 단순화하여 모델링하였습니다.
-            </div>
+        <div class="footer-info flex justify-between items-center">
+            <div><span class="font-bold">© 2026. SNN Lab</span> | Data Analysis Edition</div>
+            <div class="italic text-slate-400 hidden md:block">CSV 추출을 통해 스파이크 시계열과 네트워크 연결 강도를 분석할 수 있습니다.</div>
         </div>
     </main>
 
@@ -100,35 +115,40 @@
         const canvas = document.getElementById('simCanvas');
         const ctx = canvas.getContext('2d');
         const propPanel = document.getElementById('propPanel');
+        const rasterCanvas = document.getElementById('rasterCanvas');
+        const rasterCtx = rasterCanvas.getContext('2d');
         
         let width, height;
         let isSimulating = true;
         let camera = { x: 0, y: 0, zoom: 1 };
         let neurons = [];
         let spikes = [];
+        let spikeHistory = []; 
         
-        // Naming Counter
+        let isRecording = false;
+        let recordedSpikes = []; 
+        let recordingStartTime = 0;
+        
+        let currentTime = 0;
+        let isRasterVisible = false;
         let typeCounters = { E: 1, I: 1, IO: 1 };
 
         class Neuron {
-            constructor(x, y, type = 'excitatory') {
+            constructor(x, y, type = 'excitatory', id = null) {
                 this.x = x;
                 this.y = y;
                 this.type = type;
-                this.id = this.generateCleanId(type);
+                this.id = id || this.generateCleanId(type);
                 this.v = 0;
                 this.threshold = 1.0;
                 this.leak = 0.05;
                 this.refractory = 0;
                 this.spikeAnim = 0;
-                this.connections = []; // { targetId, weight }
+                this.connections = [];
             }
 
             generateCleanId(type) {
-                let prefix = 'E';
-                if (type === 'inhibitory') prefix = 'I';
-                if (type === 'io') prefix = 'IO';
-                
+                let prefix = type === 'inhibitory' ? 'I' : (type === 'io' ? 'IO' : 'E');
                 const id = `${prefix}${typeCounters[prefix]}`;
                 typeCounters[prefix]++;
                 return id;
@@ -149,6 +169,16 @@
                 this.v = 1.2;
                 this.spikeAnim = 1.0;
                 this.refractory = 25;
+
+                const spikeEvent = { neuronId: this.id, time: currentTime, type: this.type };
+                
+                spikeHistory.push(spikeEvent);
+                if (spikeHistory.length > 2000) spikeHistory.shift();
+
+                if (isRecording) {
+                    recordedSpikes.push(spikeEvent);
+                }
+
                 this.connections.forEach(conn => {
                     const target = neurons.find(n => n.id === conn.targetId);
                     if (target) {
@@ -180,7 +210,90 @@
             }
         }
 
-        // --- Helpers ---
+        // --- CSV Analysis Export (수정된 부분) ---
+        function toggleRecording() {
+            const btn = document.getElementById('recordBtn');
+            const csvBtn = document.getElementById('downloadCsvBtn');
+            const indicator = document.getElementById('recordingIndicator');
+
+            if (!isRecording) {
+                isRecording = true;
+                recordedSpikes = [];
+                recordingStartTime = currentTime;
+                btn.innerText = "측정 종료";
+                btn.classList.replace('bg-white', 'bg-red-500');
+                btn.classList.replace('text-slate-700', 'text-white');
+                
+                // 비활성화 상태 유지 (기록중일땐 저장 불가)
+                csvBtn.disabled = true;
+                csvBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                indicator.classList.remove('hidden');
+                indicator.classList.add('flex');
+            } else {
+                isRecording = false;
+                btn.innerText = "측정 시작";
+                btn.classList.replace('bg-red-500', 'bg-white');
+                btn.classList.replace('text-white', 'text-slate-700');
+                
+                // 측정 종료 후 저장 버튼 활성화
+                csvBtn.disabled = false;
+                csvBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200', 'text-slate-400');
+                csvBtn.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600', 'cursor-pointer');
+                indicator.classList.replace('flex', 'hidden');
+            }
+        }
+
+        function exportCSV() {
+            if (recordedSpikes.length === 0) {
+                const proceed = confirm("기록된 스파이크가 없습니다. 설정값만 포함한 CSV를 생성할까요?");
+                if (!proceed) return;
+            }
+
+            let csvRows = [];
+            
+            // 1. Spikes Section
+            csvRows.push("=== SPIKE TIME SERIES ===");
+            csvRows.push("Time_Tick,Neuron_ID,Type,Relative_Time_ms");
+            recordedSpikes.forEach(s => {
+                const relativeTime = (s.time - recordingStartTime);
+                csvRows.push(`${s.time},${s.neuronId},${s.type},${relativeTime}`);
+            });
+
+            // 2. Network Metadata Section
+            csvRows.push("\n=== NETWORK STRUCTURE ===");
+            csvRows.push("Neuron_ID,Type,Threshold,Leak");
+            neurons.forEach(n => {
+                csvRows.push(`${n.id},${n.type},${n.threshold},${n.leak}`);
+            });
+
+            // 3. Connectivity Section
+            csvRows.push("\n=== SYNAPSE WEIGHTS ===");
+            csvRows.push("Source_ID,Target_ID,Weight");
+            neurons.forEach(n => {
+                n.connections.forEach(c => {
+                    csvRows.push(`${n.id},${c.targetId},${c.weight}`);
+                });
+            });
+
+            const csvString = csvRows.join("\n");
+            // BOM 추가 (Excel 한글 깨짐 방지)
+            const BOM = "\uFEFF";
+            const blob = new Blob([BOM + csvString], { type: 'text/csv;charset=utf-8;' });
+            
+            // 파일 다운로드 실행
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `snn_analysis_${new Date().toISOString().replace(/[:.]/g, '-')}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // 메모리 해제
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        }
+
+        // --- UI & Rendering Logic ---
         function worldToScreen(x, y) {
             return { x: (x - camera.x) * camera.zoom + width / 2, y: (y - camera.y) * camera.zoom + height / 2 };
         }
@@ -195,7 +308,6 @@
             return Math.sqrt(Math.pow(p.x - (v.x + t * (w.x - v.x)), 2) + Math.pow(p.y - (v.y + t * (w.y - v.y)), 2));
         }
 
-        // --- Interaction Logic ---
         let selectedElement = null;
         let hoveredNode = null;
         let draggingNode = null;
@@ -207,10 +319,9 @@
             const worldPos = screenToWorld(e.clientX, e.clientY - 56);
             const clickedNode = neurons.find(n => Math.sqrt(Math.pow(n.x - worldPos.x, 2) + Math.pow(n.y - worldPos.y, 2)) < 30);
 
-            if (e.button === 0) { // Left Click
+            if (e.button === 0) {
                 if (clickedNode) {
                     const dist = Math.sqrt(Math.pow(clickedNode.x - worldPos.x, 2) + Math.pow(clickedNode.y - worldPos.y, 2));
-                    
                     if (e.altKey) {
                         selectedElement = { type: 'node', data: clickedNode };
                         showPanel(e.clientX, e.clientY);
@@ -233,7 +344,6 @@
                             }
                         });
                     });
-
                     if (e.altKey && foundSynapse) {
                         selectedElement = foundSynapse;
                         showPanel(e.clientX, e.clientY);
@@ -242,16 +352,13 @@
                         closePanel();
                     }
                 }
-            } else if (e.button === 2) {
-                panning = true;
-            }
+            } else if (e.button === 2) panning = true;
             lastMouse = { x: e.clientX, y: e.clientY };
         });
 
         window.addEventListener('mousemove', e => {
             const worldPos = screenToWorld(e.clientX, e.clientY - 56);
             hoveredNode = neurons.find(n => Math.sqrt(Math.pow(n.x - worldPos.x, 2) + Math.pow(n.y - worldPos.y, 2)) < 30);
-
             if (panning) {
                 camera.x -= (e.clientX - lastMouse.x) / camera.zoom;
                 camera.y -= (e.clientY - lastMouse.y) / camera.zoom;
@@ -262,64 +369,76 @@
             lastMouse = { x: e.clientX, y: e.clientY };
         });
 
-        window.addEventListener('mouseup', e => {
+        window.addEventListener('mouseup', () => {
             if (connectingFrom && hoveredNode && connectingFrom !== hoveredNode) {
-                const existing = connectingFrom.connections.find(c => c.targetId === hoveredNode.id);
-                if (!existing) {
+                if (!connectingFrom.connections.find(c => c.targetId === hoveredNode.id)) {
                     connectingFrom.connections.push({ targetId: hoveredNode.id, weight: 0.8 });
                 }
             }
-            draggingNode = null;
-            panning = false;
-            connectingFrom = null;
+            draggingNode = null; panning = false; connectingFrom = null;
         });
 
         window.addEventListener('wheel', e => {
-            const zoomSpeed = 0.0015;
-            camera.zoom -= e.deltaY * zoomSpeed;
-            camera.zoom = Math.max(0.2, Math.min(3, camera.zoom));
+            camera.zoom = Math.max(0.2, Math.min(3, camera.zoom - e.deltaY * 0.001));
         }, { passive: true });
 
         window.addEventListener('contextmenu', e => e.preventDefault());
 
-        // --- Panel Controls ---
+        function toggleRaster() {
+            isRasterVisible = !isRasterVisible;
+            document.getElementById('rasterPanel').style.display = isRasterVisible ? 'block' : 'none';
+        }
+
+        function updateRaster() {
+            if (!isRasterVisible) return;
+            rasterCtx.clearRect(0, 0, rasterCanvas.width, rasterCanvas.height);
+            const rowHeight = (rasterCanvas.height - 20) / Math.max(1, neurons.length);
+            const timeWindow = 300;
+            
+            neurons.forEach((n, i) => {
+                const y = 10 + i * rowHeight + rowHeight/2;
+                rasterCtx.strokeStyle = 'rgba(0,0,0,0.03)';
+                rasterCtx.strokeRect(0, y, rasterCanvas.width, 1);
+                rasterCtx.fillStyle = '#94a3b8';
+                rasterCtx.font = '8px monospace';
+                rasterCtx.fillText(n.id, 2, y - 2);
+            });
+
+            spikeHistory.forEach(s => {
+                const timeDiff = currentTime - s.time;
+                if (timeDiff > timeWindow) return;
+                const x = rasterCanvas.width - (timeDiff / timeWindow) * rasterCanvas.width;
+                const idx = neurons.findIndex(n => n.id === s.neuronId);
+                if (idx !== -1) {
+                    rasterCtx.fillStyle = s.type === 'inhibitory' ? '#ef4444' : '#3b82f6';
+                    rasterCtx.fillRect(x, 10 + idx * rowHeight + 2, 2, rowHeight - 4);
+                }
+            });
+        }
+
         function showPanel(x, y) {
             if (!selectedElement) return;
             propPanel.style.display = 'block';
-            
-            const panelWidth = 240;
-            const panelHeight = 320;
-            let left = x + 20;
-            let top = y - 50;
-            if (left + panelWidth > window.innerWidth) left = x - panelWidth - 20;
-            if (top + panelHeight > window.innerHeight) top = window.innerHeight - panelHeight - 60;
-            
-            propPanel.style.left = left + 'px';
-            propPanel.style.top = top + 'px';
+            propPanel.style.left = Math.min(x + 20, window.innerWidth - 260) + 'px';
+            propPanel.style.top = Math.min(y - 50, window.innerHeight - 340) + 'px';
 
-            const nControls = document.getElementById('neuronControls');
-            const sControls = document.getElementById('synapseControls');
+            const nC = document.getElementById('neuronControls');
+            const sC = document.getElementById('synapseControls');
 
             if (selectedElement.type === 'node') {
                 const node = selectedElement.data;
-                nControls.classList.remove('hidden');
-                sControls.classList.add('hidden');
+                nC.classList.remove('hidden'); sC.classList.add('hidden');
                 document.getElementById('propTitle').innerText = `Neuron [${node.id}]`;
                 document.getElementById('prop_type').value = node.type;
                 document.getElementById('prop_threshold').value = node.threshold;
                 document.getElementById('prop_leak').value = node.leak;
                 updateLabels(node);
-
-                document.getElementById('prop_type').onchange = e => {
-                    // Changing type also suggests a prefix change if desired, but we keep ID consistent for stability.
-                    node.type = e.target.value;
-                };
+                document.getElementById('prop_type').onchange = e => node.type = e.target.value;
                 document.getElementById('prop_threshold').oninput = e => { node.threshold = parseFloat(e.target.value); updateLabels(node); };
                 document.getElementById('prop_leak').oninput = e => { node.leak = parseFloat(e.target.value); updateLabels(node); };
             } else {
                 const syn = selectedElement.connection;
-                nControls.classList.add('hidden');
-                sControls.classList.remove('hidden');
+                nC.classList.add('hidden'); sC.classList.remove('hidden');
                 document.getElementById('propTitle').innerText = `Synapse Weight`;
                 document.getElementById('prop_weight').value = syn.weight;
                 document.getElementById('val_weight').innerText = syn.weight.toFixed(1);
@@ -344,158 +463,104 @@
                 neurons = neurons.filter(n => n.id !== id);
                 neurons.forEach(n => n.connections = n.connections.filter(c => c.targetId !== id));
             } else {
-                const source = selectedElement.source;
-                source.connections = source.connections.filter(c => c !== selectedElement.connection);
+                selectedElement.source.connections = selectedElement.source.connections.filter(c => c !== selectedElement.connection);
             }
-            selectedElement = null;
-            closePanel();
+            selectedElement = null; closePanel();
         }
 
         function addNeuron() {
             const pos = screenToWorld(width/2, height/2);
-            // Default added is excitatory
-            neurons.push(new Neuron(pos.x, pos.y, 'excitatory'));
+            neurons.push(new Neuron(pos.x, pos.y));
+        }
+
+        function exportData() {
+            const data = { typeCounters, neurons: neurons.map(n => ({ id: n.id, x: n.x, y: n.y, type: n.type, threshold: n.threshold, leak: n.leak, connections: n.connections })) };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'text/plain' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `snn_structure.txt`; a.click();
         }
 
         function init() {
             typeCounters = { E: 1, I: 1, IO: 1 };
             camera = { x: 0, y: 0, zoom: 1 };
-            spikes = [];
-            
-            // Standard Initial Setup
-            const n1 = new Neuron(-250, -100, 'io');
-            const n2 = new Neuron(-250, 100, 'io');
-            const n3 = new Neuron(0, 0, 'excitatory');
+            spikes = []; spikeHistory = []; currentTime = 0;
+            const n1 = new Neuron(-200, -80, 'io');
+            const n2 = new Neuron(-200, 80, 'io');
+            const n3 = new Neuron(50, 0, 'excitatory');
             const n4 = new Neuron(250, 0, 'io');
-            
             neurons = [n1, n2, n3, n4];
-            
             n1.connections.push({ targetId: n3.id, weight: 1.1 });
             n2.connections.push({ targetId: n3.id, weight: 1.1 });
-            n3.connections.push({ targetId: n4.id, weight: 1.5 });
-            
+            n3.connections.push({ targetId: n4.id, weight: 1.2 });
             closePanel();
         }
 
         function updateSim() {
             if (!isSimulating) return;
+            currentTime++;
             neurons.forEach(n => n.update());
             spikes = spikes.filter(s => s.update());
+            updateRaster();
         }
 
         function draw() {
             ctx.clearRect(0, 0, width, height);
-
-            // Draw Synapses
             neurons.forEach(n => {
                 const s = worldToScreen(n.x, n.y);
                 n.connections.forEach(conn => {
                     const target = neurons.find(node => node.id === conn.targetId);
                     if (!target) return;
                     const e = worldToScreen(target.x, target.y);
-                    const isSelected = selectedElement?.type === 'synapse' && selectedElement.connection === conn;
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(s.x, s.y);
-                    ctx.lineTo(e.x, e.y);
+                    const isSelected = selectedElement?.connection === conn;
+                    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y);
                     ctx.strokeStyle = isSelected ? '#3b82f6' : (n.type === 'inhibitory' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(100, 116, 139, 0.2)');
                     ctx.lineWidth = (isSelected ? 5 : 2) * camera.zoom;
                     ctx.stroke();
-
                     const angle = Math.atan2(e.y - s.y, e.x - s.x);
-                    ctx.beginPath();
-                    ctx.arc(e.x - Math.cos(angle)*30*camera.zoom, e.y - Math.sin(angle)*30*camera.zoom, 4*camera.zoom, 0, Math.PI*2);
-                    ctx.fillStyle = n.type === 'inhibitory' ? '#ef4444' : '#64748b';
-                    ctx.fill();
+                    ctx.beginPath(); ctx.arc(e.x - Math.cos(angle)*30*camera.zoom, e.y - Math.sin(angle)*30*camera.zoom, 4*camera.zoom, 0, Math.PI*2);
+                    ctx.fillStyle = n.type === 'inhibitory' ? '#ef4444' : '#64748b'; ctx.fill();
                 });
             });
 
             if (connectingFrom) {
                 const s = worldToScreen(connectingFrom.x, connectingFrom.y);
-                ctx.beginPath();
-                ctx.moveTo(s.x, s.y);
-                ctx.lineTo(lastMouse.x, lastMouse.y - 56);
-                ctx.strokeStyle = '#3b82f6';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 5]);
-                ctx.stroke();
-                ctx.setLineDash([]);
+                ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(lastMouse.x, lastMouse.y - 56);
+                ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
             }
 
             spikes.forEach(s => {
                 const r = s.progress / s.dist;
                 const pos = worldToScreen(s.source.x + (s.target.x - s.source.x) * r, s.source.y + (s.target.y - s.source.y) * r);
-                ctx.beginPath();
-                ctx.arc(pos.x, pos.y, 5 * camera.zoom, 0, Math.PI * 2);
-                ctx.fillStyle = s.type === 'inhibitory' ? '#ef4444' : '#3b82f6';
-                ctx.shadowBlur = 10 * camera.zoom;
-                ctx.shadowColor = ctx.fillStyle;
-                ctx.fill();
-                ctx.shadowBlur = 0;
+                ctx.beginPath(); ctx.arc(pos.x, pos.y, 5 * camera.zoom, 0, Math.PI * 2);
+                ctx.fillStyle = s.type === 'inhibitory' ? '#ef4444' : '#3b82f6'; ctx.fill();
             });
 
             neurons.forEach(n => {
                 const pos = worldToScreen(n.x, n.y);
-                const isSelected = selectedElement?.type === 'node' && selectedElement.data === n;
+                const isSelected = selectedElement?.data === n;
                 const r = (26 + n.spikeAnim * 12) * camera.zoom;
-                
-                if (n.spikeAnim > 0.02) {
-                    const gradient = ctx.createRadialGradient(pos.x, pos.y, r*0.5, pos.x, pos.y, r*2);
-                    const color = n.type === 'inhibitory' ? '239, 68, 68' : '59, 130, 246';
-                    gradient.addColorStop(0, `rgba(${color}, ${n.spikeAnim*0.5})`);
-                    gradient.addColorStop(1, `rgba(${color}, 0)`);
-                    ctx.beginPath();
-                    ctx.arc(pos.x, pos.y, r * 2.5, 0, Math.PI * 2);
-                    ctx.fillStyle = gradient;
-                    ctx.fill();
-                }
-
-                ctx.beginPath();
-                ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
-                ctx.fillStyle = n.type === 'inhibitory' ? '#ef4444' : (n.type === 'io' ? '#94a3b8' : '#3b82f6');
-                ctx.fill();
-                
+                ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+                ctx.fillStyle = n.type === 'inhibitory' ? '#ef4444' : (n.type === 'io' ? '#94a3b8' : '#3b82f6'); ctx.fill();
                 ctx.strokeStyle = isSelected ? '#000' : (n === hoveredNode ? '#1e293b' : '#fff');
-                ctx.lineWidth = (isSelected ? 6 : 2.5) * camera.zoom;
-                ctx.stroke();
-
+                ctx.lineWidth = (isSelected ? 6 : 2.5) * camera.zoom; ctx.stroke();
                 if (n.v > 0.02 && n.refractory === 0) {
-                    ctx.beginPath();
-                    ctx.arc(pos.x, pos.y, r + 5, -Math.PI/2, (-Math.PI/2) + (Math.PI * 2 * Math.min(1, n.v / n.threshold)));
-                    ctx.strokeStyle = '#1e293b';
-                    ctx.lineWidth = 3 * camera.zoom;
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.arc(pos.x, pos.y, r + 5, -Math.PI/2, (-Math.PI/2) + (Math.PI * 2 * Math.min(1, n.v / n.threshold)));
+                    ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3 * camera.zoom; ctx.stroke();
                 }
-
-                ctx.fillStyle = '#fff';
-                ctx.font = `bold ${Math.max(8, 11 * camera.zoom)}px Inter`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(n.id, pos.x, pos.y);
+                ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(8, 11 * camera.zoom)}px Inter`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(n.id, pos.x, pos.y);
             });
         }
 
-        function resize() {
+        window.onload = () => {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight - 56;
-        }
+            init();
+            (function loop() { updateSim(); draw(); requestAnimationFrame(loop); })();
+        };
 
-        window.onresize = resize;
         document.getElementById('simToggle').onclick = (e) => {
             isSimulating = !isSimulating;
-            e.target.innerText = isSimulating ? '시뮬레이션 가동 중' : '시뮬레이션 중지됨';
-            e.target.className = isSimulating ? 'px-4 py-1 bg-slate-800 text-white rounded text-xs font-bold' : 'px-4 py-1 bg-slate-400 text-white rounded text-xs font-bold';
-        };
-        document.getElementById('resetBtn').onclick = init;
-
-        window.onload = () => {
-            resize();
-            init();
-            (function loop() { 
-                updateSim(); 
-                draw(); 
-                requestAnimationFrame(loop); 
-            })();
+            e.target.innerText = isSimulating ? '시뮬레이션 중지' : '시뮬레이션 가동';
         };
     </script>
 </body>
