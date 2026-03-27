@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI XOR 딥러닝 학습기</title>
+    <title>XOR 딥러닝 학습기</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
@@ -52,61 +52,82 @@
         input[type=range].emerald-thumb::-webkit-slider-thumb {
             background: #10b981; box-shadow: 0 0 5px rgba(16,185,129,0.5);
         }
-        input[type=range].rose-thumb::-webkit-slider-thumb {
-            background: #f43f5e; box-shadow: 0 0 8px rgba(244,63,94,0.8); transform: scale(1.2);
+
+        .loss-flash { animation: flash-green 0.5s ease-out; }
+        @keyframes flash-green {
+            0% { color: #10b981; filter: brightness(2); }
+            100% { color: inherit; filter: brightness(1); }
         }
     </style>
 </head>
 <body class="w-screen h-screen flex flex-col">
     
     <!-- Top Header -->
-    <div class="h-24 px-8 py-4 flex justify-between items-center border-b border-slate-800 bg-slate-900/50 z-10 relative shadow-md">
+    <div class="min-h-[6.5rem] px-8 py-4 flex justify-between items-center border-b border-slate-800 bg-slate-900/50 z-10 relative shadow-md">
         <div>
-            <h1 class="text-3xl font-black text-white tracking-tight">XOR 딥러닝 </h1>
-            <p class="text-slate-400 text-sm mt-1">Speed 슬라이더를 x30 이상 올리면 <span class="text-rose-400 font-bold">터보 모드(다중 에폭 점프)</span>가 발동됩니다.</p>
+            <h1 class="text-3xl font-black text-white tracking-tight">XOR <span class="text-yellow-400">딥러닝</span> 학습기</h1>
+            <p class="text-slate-400 text-xs mt-1.5 tracking-wide">© Kim HyunSeok (tragowl@onedu.jje.go.kr) | 교육적 이용 허용 / 상업적 이용 금지</p>
         </div>
-        <div class="flex gap-4">
-            
-            <!-- Learning Rate Control -->
-            <div class="bg-slate-800/80 px-5 py-3 rounded-xl border border-slate-700 flex flex-col justify-center min-w-[140px]">
-                <div class="flex justify-between w-full mb-1.5">
-                    <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Learning Rate</span>
-                    <span id="lr-val" class="text-[12px] text-yellow-400 font-mono font-bold">1.5</span>
+        <div class="flex flex-col items-end gap-2">
+            <div class="flex gap-4">
+                <div class="bg-slate-800/80 px-5 py-3 rounded-xl border border-slate-700 flex flex-col justify-center min-w-[140px]">
+                    <div class="flex justify-between w-full mb-1.5">
+                        <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Learning Rate</span>
+                        <span id="lr-val" class="text-[12px] text-yellow-400 font-mono font-bold">1.5</span>
+                    </div>
+                    <input type="range" id="lr-slider" min="0.1" max="5.0" step="0.1" value="1.5" class="w-full h-1.5 bg-slate-900 rounded-lg appearance-none cursor-pointer mt-1" oninput="updateLR(this.value)">
                 </div>
-                <input type="range" id="lr-slider" min="0.1" max="5.0" step="0.1" value="1.5" class="w-full h-1.5 bg-slate-900 rounded-lg appearance-none cursor-pointer mt-1" oninput="updateLR(this.value)">
-            </div>
 
-            <!-- Speed Control -->
-            <div class="bg-slate-800/80 px-5 py-3 rounded-xl border border-slate-700 flex flex-col justify-center min-w-[140px]">
-                <div class="flex justify-between w-full mb-1.5">
-                    <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Auto Speed</span>
-                    <span id="speed-val" class="text-[12px] text-emerald-400 font-mono font-bold">x3</span>
+                <div class="bg-slate-800/80 px-5 py-3 rounded-xl border border-slate-700 flex flex-col justify-center min-w-[160px]">
+                    <div class="flex justify-between w-full mb-1.5">
+                        <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Speed Multiplier</span>
+                        <span id="speed-val" class="text-[12px] text-emerald-400 font-mono font-bold">x3</span>
+                    </div>
+                    <input type="range" id="speed-slider" min="1" max="100" step="1" value="3" class="w-full h-1.5 bg-slate-900 rounded-lg appearance-none cursor-pointer mt-1 emerald-thumb" oninput="updateSpeed(this.value)">
                 </div>
-                <input type="range" id="speed-slider" min="1" max="60" step="1" value="3" class="w-full h-1.5 bg-slate-900 rounded-lg appearance-none cursor-pointer mt-1 emerald-thumb" oninput="updateSpeed(this.value)">
-            </div>
-            
-            <!-- Reset Button -->
-            <button onclick="resetEngine()" class="bg-slate-800 hover:bg-rose-900/50 text-slate-300 hover:text-rose-400 px-4 py-3 rounded-xl border border-slate-700 hover:border-rose-500/50 flex items-center justify-center transition-all shadow-sm group" title="엔진 초기화">
-                <svg class="w-6 h-6 group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            </button>
+                
+                <button onclick="resetEngine()" class="bg-slate-800 hover:bg-rose-900/50 text-slate-300 hover:text-rose-400 px-4 py-3 rounded-xl border border-slate-700 hover:border-rose-500/50 flex items-center justify-center transition-all shadow-sm group" title="엔진 초기화">
+                    <svg class="w-6 h-6 group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </button>
 
-            <!-- Auto Run Button -->
-            <button id="auto-btn" onclick="toggleAutoPlay()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl border border-indigo-500 flex items-center gap-4 transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)] min-w-[180px]">
-                <div class="relative flex h-4 w-4">
-                  <span id="auto-ping" class="absolute inline-flex h-full w-full rounded-full bg-white opacity-0 transition-opacity"></span>
-                  <span id="auto-dot" class="relative inline-flex rounded-full h-4 w-4 bg-white/40 transition-colors"></span>
-                </div>
-                <div class="flex flex-col items-start">
-                    <span class="text-[10px] font-bold tracking-widest uppercase opacity-80" id="auto-label">Auto Run</span>
-                    <span class="text-xl font-black tracking-wide leading-none" id="auto-text">START</span>
-                </div>
-            </button>
+                <button id="auto-btn" onclick="toggleAutoPlay()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl border border-indigo-500 flex items-center gap-4 transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)] min-w-[180px]">
+                    <div class="relative flex h-4 w-4">
+                      <span id="auto-ping" class="absolute inline-flex h-full w-full rounded-full bg-white opacity-0 transition-opacity"></span>
+                      <span id="auto-dot" class="relative inline-flex rounded-full h-4 w-4 bg-white/40 transition-colors"></span>
+                    </div>
+                    <div class="flex flex-col items-start">
+                        <span class="text-[10px] font-bold tracking-widest uppercase opacity-80" id="auto-label">Auto Run</span>
+                        <span class="text-xl font-black tracking-wide leading-none" id="auto-text">START</span>
+                    </div>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Main Canvas -->
+    <!-- Main Canvas Area -->
     <div class="flex-1 relative overflow-hidden flex flex-col bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0iIzMzNDE1NSIvPjwvc3ZnPg==')]">
         
+        <!-- AI Core Principle Banner -->
+        <div class="w-full flex justify-center pt-8 pb-2">
+            <div class="bg-slate-800/40 backdrop-blur-sm px-10 py-4 rounded-2xl border border-white/5 flex items-center gap-8 shadow-2xl">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] mb-1">Deep Learning Essence</span>
+                    <h3 class="text-lg font-bold text-white/90">인공지능의 본질: <span class="text-indigo-300">오차를 줄이는 최적의 가중치 찾기</span></h3>
+                </div>
+                <div class="h-8 w-px bg-slate-700"></div>
+                <div class="flex gap-10">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Training Progress</span>
+                        <span class="text-xs font-mono font-medium text-slate-300">Epoch: <span id="banner-epoch" class="text-indigo-400">0</span></span>
+                    </div>
+                    <div class="flex flex-col min-w-[120px]">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Current Error (MSE)</span>
+                        <span class="text-lg font-mono font-black text-emerald-400 transition-all duration-300" id="banner-loss">0.25000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="flex-1 relative w-full h-full" id="board-container">
             <svg id="svg-canvas" class="w-full h-full absolute inset-0"></svg>
         </div>
@@ -159,20 +180,7 @@
         function updateSpeed(val) {
             const speedMultiplier = parseInt(val);
             document.getElementById('speed-val').innerText = `x${speedMultiplier}`;
-            
-            const slider = document.getElementById('speed-slider');
-            const valText = document.getElementById('speed-val');
-            
-            if (speedMultiplier >= 30) {
-                slider.classList.remove('emerald-thumb'); slider.classList.add('rose-thumb');
-                valText.className = "text-[12px] text-rose-500 font-mono font-black animate-pulse";
-                valText.innerText = `🔥 TURBO x${speedMultiplier}`;
-                autoSpeedDelay = 16; 
-            } else {
-                slider.classList.add('emerald-thumb'); slider.classList.remove('rose-thumb');
-                valText.className = "text-[12px] text-emerald-400 font-mono font-bold";
-                autoSpeedDelay = 1000 / speedMultiplier;
-            }
+            autoSpeedDelay = Math.max(10, 1000 / speedMultiplier);
             updateUI();
         }
 
@@ -193,7 +201,7 @@
                 text.innerText = "STOP";
                 
                 manualControls.classList.add('opacity-40', 'pointer-events-none');
-                mainBtn.innerText = "AUTO RUNNING ⚡";
+                mainBtn.innerText = "AUTO RUNNING...";
 
                 if (currentStep === 0) nextStep();
                 autoStep();
@@ -235,14 +243,12 @@
         const Y = [[0], [1], [1], [0]];
         const strX = ["[0, 0]", "[0, 1]", "[1, 0]", "[1, 1]"];
         
-        // 원본 가중치 보존용 (리셋 시 사용)
         const initialNet = {
             w1: [[ 0.8, -0.9], [-1.2,  1.1]],        b1: [[-0.5,  0.5]],
             w2: [[ 1.2, -0.8,  1.0], [-1.0,  1.4, -0.9]], b2: [[ 0.2, -0.3,  0.4]],
             w3: [[-1.2], [ 1.5], [-1.0]],               b3: [[ 0.1]]
         };
 
-        // 깊은 복사(Deep Copy) 함수
         const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
 
         let net = deepCopy(initialNet);
@@ -282,43 +288,10 @@
             return { A1, A2, A3, MSE, grads: { dW3, dB3, dW2, dB2, dW1, dB1 } };
         }
 
-        function applyAllGradients(grads) {
-            vel.w3 = MathEngine.matAdd(MathEngine.scalarMul(vel.w3, MU), MathEngine.scalarMul(grads.dW3, currentLearningRate));
-            net.w3 = MathEngine.matSub(net.w3, vel.w3);
-            vel.b3 = MathEngine.matAdd(MathEngine.scalarMul(vel.b3, MU), MathEngine.scalarMul(grads.dB3, currentLearningRate));
-            net.b3 = MathEngine.matSub(net.b3, vel.b3);
-            
-            vel.w2 = MathEngine.matAdd(MathEngine.scalarMul(vel.w2, MU), MathEngine.scalarMul(grads.dW2, currentLearningRate));
-            net.w2 = MathEngine.matSub(net.w2, vel.w2);
-            vel.b2 = MathEngine.matAdd(MathEngine.scalarMul(vel.b2, MU), MathEngine.scalarMul(grads.dB2, currentLearningRate));
-            net.b2 = MathEngine.matSub(net.b2, vel.b2);
-            
-            vel.w1 = MathEngine.matAdd(MathEngine.scalarMul(vel.w1, MU), MathEngine.scalarMul(grads.dW1, currentLearningRate));
-            net.w1 = MathEngine.matSub(net.w1, vel.w1);
-            vel.b1 = MathEngine.matAdd(MathEngine.scalarMul(vel.b1, MU), MathEngine.scalarMul(grads.dB1, currentLearningRate));
-            net.b1 = MathEngine.matSub(net.b1, vel.b1);
-        }
-
         function autoStep() {
             if (!isAutoPlaying) return;
-            
-            let speedMult = parseInt(document.getElementById('speed-slider').value);
-            
-            if (speedMult >= 30) {
-                let loops = speedMult >= 50 ? 50 : 20; 
-                for(let i=0; i<loops; i++) {
-                    epochData = calculateEpoch();
-                    applyAllGradients(epochData.grads);
-                    epochCount++;
-                }
-                currentStep = 6; 
-                updateUI();
-                draw();
-                autoPlayTimer = setTimeout(autoStep, 16);
-            } else {
-                nextStep();
-                autoPlayTimer = setTimeout(autoStep, autoSpeedDelay);
-            }
+            nextStep();
+            autoPlayTimer = setTimeout(autoStep, autoSpeedDelay);
         }
 
         function nextStep() { 
@@ -354,20 +327,27 @@
         }
 
         function updateUI() {
-            let speedMult = parseInt(document.getElementById('speed-slider').value);
             const stepNumEl = document.getElementById('step-num');
             const ind = document.getElementById('step-indicator');
             const titleEl = document.getElementById('step-title');
             const descEl = document.getElementById('step-desc');
 
-            if (isAutoPlaying && speedMult >= 30) {
-                stepNumEl.innerText = `${epochCount}`;
-                stepNumEl.className = "text-2xl font-black text-rose-500 animate-pulse";
-                ind.className = "w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors bg-rose-500/20 border-2 border-rose-500/50";
+            // Banner Real-time Update
+            const bannerEpoch = document.getElementById('banner-epoch');
+            const bannerLoss = document.getElementById('banner-loss');
+            bannerEpoch.innerText = epochCount;
+            
+            if (epochData) {
+                const oldLoss = parseFloat(bannerLoss.innerText);
+                const newLoss = epochData.MSE;
+                bannerLoss.innerText = newLoss.toFixed(5);
                 
-                titleEl.innerHTML = `🔥 터보 모드 가동 중 <span class="text-sm font-normal text-slate-400 ml-2">(${epochData ? '오차: ' + epochData.MSE.toFixed(5) : ''})</span>`;
-                descEl.innerText = `애니메이션을 생략하고 모멘텀(Momentum) 최적화를 통해 초당 수십~수백 번의 에폭(Epoch)을 처리하며 정답에 빠르게 수렴합니다.`;
-                return;
+                // If loss decreased, show flash effect
+                if (newLoss < oldLoss) {
+                    bannerLoss.classList.remove('loss-flash');
+                    void bannerLoss.offsetWidth; // trigger reflow
+                    bannerLoss.classList.add('loss-flash');
+                }
             }
 
             if (currentStep === 0 && epochCount === 0) {
@@ -420,13 +400,11 @@
             }
         }
 
-        // 소프트 리셋 함수 (새로고침 없이 내부 상태만 초기화)
         function resetEngine() {
             if (isAutoPlaying) {
-                toggleAutoPlay(); // 오토플레이 중지
+                toggleAutoPlay(); 
             }
             
-            // 네트워크 & 모멘텀 초기화
             net = deepCopy(initialNet);
             vel = {
                 w1: MathEngine.zeros(2,2), b1: MathEngine.zeros(1,2),
@@ -434,10 +412,13 @@
                 w3: MathEngine.zeros(3,1), b3: MathEngine.zeros(1,1)
             };
             
-            // 상태 변수 초기화
             currentStep = 0;
             epochCount = 0;
             epochData = null;
+
+            // Reset banner values manually
+            document.getElementById('banner-epoch').innerText = "0";
+            document.getElementById('banner-loss').innerText = "0.25000";
             
             updateUI();
             draw();
@@ -453,7 +434,7 @@
 
             const layerX = [w * 0.12, w * 0.35, w * 0.58, w * 0.81, w * 0.93];
             const nodes = [];
-            const centerY = h * 0.68; 
+            const centerY = h * 0.65; 
             const spacing = h * 0.12;
 
             const addNodes = (layerIdx, count) => {
@@ -463,18 +444,18 @@
                 }
             };
 
-            addNodes(0, 4); // Input
-            addNodes(1, 2); // Hidden 1
-            addNodes(2, 3); // Hidden 2
-            addNodes(3, 4); // Output
-            addNodes(4, 4); // Truth
+            addNodes(0, 4); 
+            addNodes(1, 2); 
+            addNodes(2, 3); 
+            addNodes(3, 4); 
+            addNodes(4, 4); 
 
             const midX1 = (layerX[0] + layerX[1]) / 2;
             const midX2 = (layerX[1] + layerX[2]) / 2;
             const midX3 = (layerX[2] + layerX[3]) / 2;
             
-            const mxY_W = h * 0.18; 
-            const mxY_B = h * 0.35; 
+            const mxY_W = h * 0.12; 
+            const mxY_B = h * 0.29; 
             
             const drawMatrix = (mx, my, data, title, isFwd, isBwd, layerKey) => {
                 const cellW = 70, cellH = 32;
@@ -486,7 +467,7 @@
                 else if (isBwd) boxCls += ' matrix-active-bwd';
 
                 g.append("rect").attr("width", cols*cellW).attr("height", rows*cellH).attr("rx", 6).attr("class", boxCls);
-                g.append("text").attr("x", (cols*cellW)/2).attr("y", -10).attr("text-anchor", "middle").attr("class", "chalk-font fill-slate-400 text-sm tracking-wider").text(title);
+                g.append("text").attr("x", (cols*cellW)/2).attr("y", -10).attr("text-anchor", "middle").attr("class", "chalk-font fill-slate-400 text-[11px] tracking-wider font-bold uppercase").text(title);
 
                 data.forEach((row, r) => {
                     row.forEach((val, c) => {
@@ -501,7 +482,7 @@
                         g.append("text")
                             .attr("x", c*cellW + cellW/2).attr("y", r*cellH + cellH/2 + 5)
                             .attr("text-anchor", "middle")
-                            .attr("class", `mono matrix-cell text-base ${textCol}`)
+                            .attr("class", `mono matrix-cell text-sm ${textCol}`)
                             .text(val.toFixed(3))
                             .on("mouseenter", function() {
                                 d3.select(this).classed("fill-yellow-400 scale-125", true).classed("fill-white", false);
@@ -532,12 +513,12 @@
                 });
             };
 
-            drawMatrix(midX1, mxY_W, net.w1, "W1 (2x2)", currentStep==1, currentStep==10, 'w1');
-            drawMatrix(midX1, mxY_B, net.b1, "B1 (1x2)", currentStep==2, currentStep==10, 'b1');
-            drawMatrix(midX2, mxY_W, net.w2, "W2 (2x3)", currentStep==3, currentStep==9, 'w2');
-            drawMatrix(midX2, mxY_B, net.b2, "B2 (1x3)", currentStep==4, currentStep==9, 'b2');
-            drawMatrix(midX3, mxY_W, net.w3, "W3 (3x1)", currentStep==5, currentStep==8, 'w3');
-            drawMatrix(midX3, mxY_B, net.b3, "B3 (1x1)", currentStep==6, currentStep==8, 'b3');
+            drawMatrix(midX1, mxY_W, net.w1, "Weight 1", currentStep==1, currentStep==10, 'w1');
+            drawMatrix(midX1, mxY_B, net.b1, "Bias 1", currentStep==2, currentStep==10, 'b1');
+            drawMatrix(midX2, mxY_W, net.w2, "Weight 2", currentStep==3, currentStep==9, 'w2');
+            drawMatrix(midX2, mxY_B, net.b2, "Bias 2", currentStep==4, currentStep==9, 'b2');
+            drawMatrix(midX3, mxY_W, net.w3, "Weight 3", currentStep==5, currentStep==8, 'w3');
+            drawMatrix(midX3, mxY_B, net.b3, "Bias 3", currentStep==6, currentStep==8, 'b3');
 
             const drawNetworkLinks = (fromLvl, toLvl, fStep, bStep) => {
                 const fromN = nodes.filter(n => n.layer === fromLvl);
@@ -547,11 +528,6 @@
                         let cls = `link link-L${fromLvl}-L${toLvl}-s${source.idx} link-L${fromLvl}-L${toLvl}-t${target.idx}`;
                         if (currentStep === fStep) cls += " link-forward";
                         else if (currentStep === bStep) cls += " link-backward";
-                        
-                        let speedMult = parseInt(document.getElementById('speed-slider').value);
-                        if(isAutoPlaying && speedMult >= 30) {
-                            cls += " stroke-yellow-500/30";
-                        }
                         
                         const path = d3.linkHorizontal()({source: [source.x, source.y], target: [target.x, target.y]});
                         svg.append("path").attr("class", cls).attr("d", path);
