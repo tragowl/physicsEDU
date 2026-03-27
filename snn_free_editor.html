@@ -30,6 +30,11 @@
                 <span class="rec-dot animate-pulse-fast"></span> RECORDING DATA...
             </div>
         </div>
+
+        <!-- 추가된 설명 문구 -->
+        <div class="hidden lg:flex items-center text-xs text-slate-500 font-medium bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200">
+            💡 <span class="ml-1"><b>Alt+클릭</b>: 파라미터 수정 &nbsp;|&nbsp; <b>테두리 드래그</b>: 시냅스 연결 &nbsp;|&nbsp; <b>배경 드래그</b>: 화면 이동</span>
+        </div>
         
         <div class="flex gap-2 items-center">
             <!-- Recording Controls -->
@@ -251,7 +256,7 @@
                     importData(data);
                 } catch (err) {
                     console.error("파일 파싱 에러:", err);
-                    alert("잘못된 파일 형식입니다.");
+                    console.warn("잘못된 파일 형식입니다."); // alert() 제거 (iframe 차단 방지)
                 }
             };
             reader.readAsText(file);
@@ -309,9 +314,9 @@
         }
 
         function exportCSV() {
+            // iframe 환경에서 confirm()이 차단되어 다운로드가 중단되는 문제 해결
             if (recordedSpikes.length === 0) {
-                const proceed = confirm("기록된 스파이크가 없습니다. 설정값만 포함한 CSV를 생성할까요?");
-                if (!proceed) return;
+                console.log("기록된 스파이크가 없습니다. 설정값만 포함한 CSV를 생성합니다.");
             }
 
             let csvRows = [];
@@ -341,8 +346,8 @@
             const blob = new Blob([BOM + csvString], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `snn_analysis_${new Date().toISOString().replace(/[:.]/g, '-')}.csv`);
+            link.href = url;
+            link.download = `snn_analysis_${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -406,9 +411,13 @@
                     } else if (!e.altKey) {
                         selectedElement = null;
                         closePanel();
+                        // 빈 공간 클릭 시 패닝(화면 이동) 활성화
+                        panning = true;
                     }
                 }
-            } else if (e.button === 2) panning = true;
+            } else if (e.button === 2 || e.button === 1) { // 우클릭(2)이나 휠클릭(1) 시 패닝
+                panning = true;
+            }
             lastMouse = { x: e.clientX, y: e.clientY };
         });
 
@@ -533,14 +542,50 @@
             typeCounters = { E: 1, I: 1, IO: 1 };
             camera = { x: 0, y: 0, zoom: 1 };
             spikes = []; spikeHistory = []; currentTime = 0;
-            const n1 = new Neuron(-200, -80, 'io');
-            const n2 = new Neuron(-200, 80, 'io');
-            const n3 = new Neuron(50, 0, 'excitatory');
-            const n4 = new Neuron(250, 0, 'io');
-            neurons = [n1, n2, n3, n4];
-            n1.connections.push({ targetId: n3.id, weight: 1.1 });
-            n2.connections.push({ targetId: n3.id, weight: 1.1 });
-            n3.connections.push({ targetId: n4.id, weight: 1.2 });
+            
+            // 10개의 뉴런 초기 배치 설계 (3계층 + 피드백 구조)
+            const n1 = new Neuron(-350, -150, 'io');
+            const n2 = new Neuron(-350, 0, 'io');
+            const n3 = new Neuron(-350, 150, 'io');
+            
+            const n4 = new Neuron(-100, -200, 'excitatory');
+            const n5 = new Neuron(-100, -50, 'inhibitory');
+            const n6 = new Neuron(-100, 80, 'excitatory');
+            const n7 = new Neuron(-100, 220, 'excitatory');
+            
+            const n8 = new Neuron(150, -100, 'excitatory');
+            const n9 = new Neuron(150, 120, 'inhibitory');
+            
+            const n10 = new Neuron(400, 0, 'io');
+
+            neurons = [n1, n2, n3, n4, n5, n6, n7, n8, n9, n10];
+
+            // 복합적인 시냅스 연결 세팅
+            n1.connections.push({ targetId: n4.id, weight: 1.2 });
+            n1.connections.push({ targetId: n5.id, weight: 0.9 });
+            
+            n2.connections.push({ targetId: n5.id, weight: 1.1 });
+            n2.connections.push({ targetId: n6.id, weight: 1.3 });
+            
+            n3.connections.push({ targetId: n6.id, weight: 0.8 });
+            n3.connections.push({ targetId: n7.id, weight: 1.4 });
+            
+            n4.connections.push({ targetId: n8.id, weight: 1.5 });
+            
+            n5.connections.push({ targetId: n8.id, weight: 1.2 }); // 억제
+            n5.connections.push({ targetId: n9.id, weight: 0.7 }); // 억제
+            
+            n6.connections.push({ targetId: n8.id, weight: 1.1 });
+            n6.connections.push({ targetId: n9.id, weight: 1.2 });
+            
+            n7.connections.push({ targetId: n9.id, weight: 1.5 });
+            
+            n8.connections.push({ targetId: n10.id, weight: 1.6 });
+            n9.connections.push({ targetId: n10.id, weight: 1.3 }); // 억제
+
+            // 피드백 (순환) 연결 루프
+            n10.connections.push({ targetId: n6.id, weight: 0.6 });
+            
             closePanel();
         }
 
