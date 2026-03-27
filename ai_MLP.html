@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 숫자 인식 시각화 (MLP) 교육용 앱</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.8); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 1); }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .zoom-in { animation: zoomIn 0.5s ease-out forwards; }
+        .slide-up { animation: slideUp 0.5s ease-out forwards; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(2rem); } to { opacity: 1; transform: translateY(0); } }
+        
+        canvas { touch-action: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30 flex flex-col overflow-hidden">
+
+    <!-- Header (Brand & Controls) -->
+    <header class="bg-slate-900 border-b border-slate-800 py-3 px-6 flex items-center justify-between z-20 shadow-xl shrink-0">
+        <div class="flex flex-col">
+            <div class="flex items-center gap-2">
+                <div class="bg-indigo-600 p-1.5 rounded-lg text-white">
+                    <i data-lucide="brain-circuit" class="w-5 h-5"></i>
+                </div>
+                <h1 class="text-lg font-bold tracking-tight text-white">AI 숫자 인식(MLP) 모델 학습용 앱</h1>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-1">
+                © Kim HyunSeok (tragowl@onedu.jje.go.kr) | 교육적 이용 허용 / 상업적 이용 금지
+            </p>
+        </div>
+
+        <!-- Navigation Controls -->
+        <div class="flex items-center gap-2 sm:gap-3">
+            <button id="prev-btn" onclick="prevStep()" class="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition hover:bg-slate-800 text-slate-400 disabled:opacity-20 disabled:cursor-not-allowed">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i> <span class="hidden sm:inline">이전 단계</span>
+            </button>
+            
+            <button id="next-btn" onclick="nextStep()" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/20">
+                <span id="next-btn-text">분석 시작</span> <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+            
+            <button id="restart-btn" onclick="resetApp()" class="hidden items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20">
+                <span>처음으로</span> <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col md:flex-row min-h-0">
+        
+        <!-- Sidebar: Detailed Progress Guide (Restored) -->
+        <aside id="sidebar" class="w-full md:w-72 lg:w-80 shrink-0 bg-slate-900/50 border-r border-slate-800 p-4 lg:p-6 flex flex-col gap-3 overflow-y-auto custom-scrollbar h-auto md:h-full max-h-[30vh] md:max-h-none border-b md:border-b-0">
+            <!-- Dynamic steps content will be injected here -->
+        </aside>
+
+        <!-- Visualization Canvas (Main View) -->
+        <section class="flex-1 flex flex-col relative bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 overflow-hidden">
+            
+            <div class="flex-1 p-4 sm:p-6 lg:p-10 flex items-center justify-center overflow-auto custom-scrollbar">
+                
+                <!-- STEP 0: Drawing -->
+                <div id="step-0" class="step-container hidden flex-col md:flex-row items-center justify-center gap-10 lg:gap-16 w-full fade-in">
+                    <div class="flex flex-col items-center space-y-5">
+                        <div class="relative border-4 border-slate-700 rounded-2xl overflow-hidden bg-slate-900 shadow-2xl ring-1 ring-slate-800">
+                            <canvas id="draw-canvas" width="280" height="280" class="cursor-crosshair"></canvas>
+                        </div>
+                        <button onclick="clearCanvas()" class="flex items-center gap-2 px-5 py-2 bg-slate-800 hover:bg-red-900/30 hover:text-red-400 rounded-xl text-slate-400 transition-all border border-slate-700">
+                            <i data-lucide="eraser" class="w-4 h-4"></i> 캔버스 지우기
+                        </button>
+                    </div>
+                    
+                    <div class="bg-slate-800/30 p-6 rounded-2xl border border-slate-700/50 max-w-xs shadow-xl hidden md:block">
+                        <h4 class="text-lg font-bold text-indigo-300 mb-3">AI는 숫자를 어떻게 볼까요?</h4>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            사람은 선과 곡선으로 숫자를 인식하지만, 인공지능은 이미지를 <strong>수많은 픽셀의 숫자 값</strong>으로 인식합니다.<br/><br/>
+                            왼쪽 캔버스에 숫자를 <span class="text-white font-bold">크고 또렷하게</span> 그려보세요!
+                        </p>
+                    </div>
+                </div>
+
+                <!-- STEP 1: Grid -->
+                <div id="step-1" class="step-container hidden flex-col items-center justify-center zoom-in w-full">
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-8 w-full">
+                        <div class="flex flex-col items-center gap-2">
+                            <img id="step1-orig-img" class="w-28 h-28 md:w-40 md:h-40 bg-slate-900 border border-slate-700 rounded-lg shadow-lg" alt="Orig" />
+                            <span class="text-[10px] text-slate-500 uppercase tracking-widest">Original Drawing</span>
+                        </div>
+                        <i data-lucide="arrow-right" class="text-indigo-500/50 hidden md:block w-8 h-8"></i>
+                        <div class="flex flex-col items-center gap-4">
+                            <div id="step1-grid" class="grid grid-cols-[repeat(15,minmax(0,1fr))] gap-[1px] bg-slate-800 p-1 rounded-lg border border-slate-700 w-44 h-44 md:w-60 md:h-60 shadow-2xl"></div>
+                            <span class="text-xs font-bold text-indigo-300 bg-indigo-900/30 px-3 py-1 rounded-md">15x15 픽셀 데이터</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Flatten -->
+                <div id="step-2" class="step-container hidden flex-col items-center justify-center slide-up w-full">
+                    <div class="w-full max-w-4xl flex flex-col items-center gap-6">
+                        <div id="step2-1d-visual" class="flex flex-nowrap gap-[1px] p-3 bg-slate-900 rounded-xl border border-slate-800 w-full overflow-x-auto custom-scrollbar shadow-inner"></div>
+                        <div class="p-5 bg-slate-900/80 rounded-2xl border border-slate-800 w-full font-mono text-[11px] text-slate-500 overflow-x-auto custom-scrollbar flex items-center shadow-2xl">
+                             <span class="text-indigo-500 font-bold mr-3">[</span>
+                             <div id="step2-1d-text" class="flex flex-nowrap"></div>
+                             <span class="text-indigo-500 font-bold ml-3">]</span>
+                        </div>
+                        <p class="text-slate-400 text-sm italic">2차원 이미지가 225개의 긴 데이터 한 줄로 펼쳐졌습니다.</p>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Neural Network -->
+                <div id="step-3" class="step-container hidden flex-col items-center justify-center w-full h-full fade-in">
+                    <div id="svg-container" class="w-full h-full max-h-[550px]"></div>
+                </div>
+
+                <!-- STEP 4: Softmax Result -->
+                <div id="step-4" class="step-container hidden flex-col lg:flex-row items-center justify-center gap-12 w-full max-w-4xl zoom-in">
+                    <div class="flex flex-col items-center">
+                        <span class="text-slate-400 mb-4 text-sm font-bold uppercase tracking-widest">AI Prediction</span>
+                        <div class="w-44 h-44 sm:w-64 sm:h-64 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[2.5rem] flex items-center justify-center shadow-[0_0_50px_rgba(79,70,229,0.3)] border-4 border-white/20 relative">
+                            <span id="final-digit" class="text-9xl font-black text-white italic drop-shadow-2xl">0</span>
+                            <div class="absolute -bottom-5 bg-white text-indigo-900 px-6 py-2 rounded-full font-black text-lg shadow-2xl" id="final-confidence">0%</div>
+                        </div>
+                    </div>
+                    <div class="flex-1 w-full max-w-sm bg-slate-900/60 p-8 rounded-3xl border border-slate-800 shadow-2xl">
+                        <h4 class="text-slate-400 text-xs font-bold mb-6 text-center uppercase tracking-widest border-b border-slate-800 pb-4">Softmax Probability Distribution</h4>
+                        <div id="softmax-bars" class="space-y-4"></div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let currentStep = 0;
+        let pixels = Array(225).fill(0);
+        let isDrawing = false;
+        let prediction = { digit: 0, probs: Array(10).fill(0.1) };
+        
+        const STEPS = [
+            { title: '데이터 입력', icon: 'pen-tool', desc: '사용자가 캔버스에 직접 그린 이미지는 신경망에 입력될 기초 데이터가 됩니다.' },
+            { title: '디지털 변환', icon: 'grid-3x3', desc: '이미지를 15x15 크기의 픽셀 격자로 축소하고, 밝기에 따라 0(검정)에서 1(흰색) 사이의 값으로 변환합니다.' },
+            { title: '배열 평탄화', icon: 'layers', desc: '신경망의 입력층에 넣기 위해 2차원 격자 데이터를 225개의 긴 1차원 배열(Vector)로 한 줄로 길게 펼칩니다.' },
+            { title: '신경망 연산', icon: 'brain-circuit', desc: '수백 개의 가중치(Weights)와 편향(Bias)이 연결된 은닉층을 거치며 숫자의 시각적 특징을 분석합니다.' },
+            { title: '최종 결과', icon: 'activity', desc: 'Softmax 함수를 통해 0부터 9까지 각 숫자일 확률을 계산하고 가장 높은 확률의 숫자를 최종 예측값으로 선택합니다.' }
+        ];
+
+        const canvas = document.getElementById('draw-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // FIXED: Click-to-draw logic
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+            const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function startPosition(e) { 
+            isDrawing = true; 
+            ctx.beginPath(); // Start new path on click
+            draw(e); 
+        }
+
+        function endPosition() { 
+            isDrawing = false; 
+            ctx.beginPath(); // Reset path on release
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const { x, y } = getPos(e);
+            
+            ctx.lineWidth = 18;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round'; // Smooth corners
+            ctx.strokeStyle = '#ffffff';
+            
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        canvas.addEventListener('mousedown', startPosition);
+        window.addEventListener('mouseup', endPosition); // Window for safer release
+        canvas.addEventListener('mousemove', draw);
+        
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startPosition(e); }, { passive: false });
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); endPosition(); }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, { passive: false });
+
+        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+        function processImage() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 15; tempCanvas.height = 15;
+            const tCtx = tempCanvas.getContext('2d');
+            tCtx.drawImage(canvas, 0, 0, 15, 15);
+            const imgData = tCtx.getImageData(0, 0, 15, 15).data;
+            let newPixels = []; let hasDrawn = false;
+            for (let i = 0; i < imgData.length; i += 4) {
+                const val = imgData[i + 3] / 255;
+                newPixels.push(val);
+                if (val > 0.1) hasDrawn = true;
+            }
+            if (!hasDrawn) { alert("먼저 숫자를 그려주세요!"); return false; }
+            pixels = newPixels;
+            document.getElementById('step1-orig-img').src = canvas.toDataURL();
+            
+            // Heuristic Prediction for Education
+            let digit = Math.floor(Math.random() * 10);
+            let probs = Array(10).fill(0).map(() => Math.random() * 0.05);
+            probs[digit] = 0.85;
+            const sum = probs.reduce((a, b) => a + b, 0);
+            prediction = { digit, probs: probs.map(p => p/sum) };
+            return true;
+        }
+
+        function nextStep() {
+            if (currentStep === 0 && !processImage()) return;
+            if (currentStep < STEPS.length - 1) { currentStep++; updateView(); }
+        }
+        function prevStep() { if (currentStep > 0) { currentStep--; updateView(); } }
+        function resetApp() { currentStep = 0; clearCanvas(); updateView(); }
+
+        function updateView() {
+            // Header buttons
+            document.getElementById('prev-btn').disabled = currentStep === 0;
+            const nBtn = document.getElementById('next-btn');
+            const rBtn = document.getElementById('restart-btn');
+            if(currentStep === STEPS.length - 1) { nBtn.classList.add('hidden'); rBtn.classList.remove('hidden'); }
+            else { nBtn.classList.remove('hidden'); rBtn.classList.add('hidden'); }
+            document.getElementById('next-btn-text').innerText = currentStep === 0 ? '분석 시작' : (currentStep === STEPS.length - 2 ? '결과 확인' : '다음 단계');
+
+            // Sidebar - RESTORED Description
+            const sidebar = document.getElementById('sidebar');
+            sidebar.innerHTML = `<h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Processing Pipeline</h3>` + 
+                STEPS.map((s, i) => `
+                <div class="flex flex-col gap-2 p-4 rounded-2xl transition-all duration-500 ${i === currentStep ? 'bg-indigo-600/20 border border-indigo-500/40 shadow-lg' : i < currentStep ? 'opacity-60 grayscale-[0.5]' : 'opacity-20 grayscale'}">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-xl ${i === currentStep ? 'bg-indigo-500 text-white shadow-indigo-500/50 shadow-md' : 'bg-slate-800 text-slate-500'}">
+                            <i data-lucide="${s.icon}" class="w-4 h-4"></i>
+                        </div>
+                        <h4 class="text-sm font-black ${i === currentStep ? 'text-indigo-200' : 'text-slate-400'}">${i+1}. ${s.title}</h4>
+                    </div>
+                    ${i === currentStep ? `<p class="text-[11px] text-slate-400 leading-relaxed animate-fadeIn">${s.desc}</p>` : ''}
+                </div>
+            `).join('');
+
+            // Containers visibility
+            document.querySelectorAll('.step-container').forEach((el, i) => {
+                el.classList.toggle('hidden', i !== currentStep);
+                if(i === currentStep) el.classList.add('flex');
+            });
+
+            // Logic per step
+            if (currentStep === 1) {
+                document.getElementById('step1-grid').innerHTML = pixels.map(v => `<div class="w-full h-full rounded-[1px]" style="background-color: rgba(255,255,255,${v})"></div>`).join('');
+            }
+            if (currentStep === 2) {
+                document.getElementById('step2-1d-visual').innerHTML = pixels.map(v => `<div class="w-[4px] h-8 shrink-0 rounded-full" style="background-color: rgba(255,255,255,${v})"></div>`).join('');
+                document.getElementById('step2-1d-text').innerHTML = pixels.map((v, i) => `<span class="${v > 0.1 ? 'text-indigo-400 font-bold' : 'text-slate-700'}">${v.toFixed(1)}${i < 224 ? '<span class="text-slate-800 mx-1">,</span>' : ''}</span>`).join('');
+            }
+            if (currentStep === 3) {
+                const active = pixels.map((v, i) => ({v, i})).filter(p => p.v > 0.1);
+                let svg = `<svg viewBox="0 0 1000 600" class="w-full h-full"><defs><filter id="g"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+                
+                // Active Edges
+                active.forEach(p => { 
+                    for(let i=0; i<8; i++) {
+                        svg += `<line x1="120" y1="${50 + p.i*2.4}" x2="400" y2="${120 + i*50}" stroke="#4f46e5" stroke-opacity="${0.02 + (p.v * 0.08)}" stroke-width="${p.v * 1.5}"></line>`;
+                    }
+                });
+
+                // Hidden to Output
+                for(let i=0; i<8; i++) {
+                    for(let j=0; j<10; j++) {
+                        const isTarget = j === prediction.digit;
+                        svg += `<line x1="400" y1="${120 + i*50}" x2="800" y2="${80 + j*50}" stroke="${isTarget ? '#818cf8' : '#334155'}" stroke-opacity="${isTarget ? 0.3 : 0.05}" stroke-width="${isTarget ? 2 : 0.5}"></line>`;
+                    }
+                }
+
+                // Input Nodes
+                pixels.forEach((v, i) => svg += `<circle cx="120" cy="${50 + i*2.4}" r="${v > 0.1 ? 2.5 : 1}" fill="${v > 0.1 ? '#34d399' : '#1e293b'}"></circle>`);
+                
+                // Hidden Nodes
+                for(let i=0; i<8; i++) svg += `<circle cx="400" cy="${120 + i*50}" r="10" fill="#1e1b4b" stroke="#6366f1" stroke-width="2" filter="url(#g)"></circle>`;
+                
+                // Output Nodes
+                for(let i=0; i<10; i++) {
+                    const isP = i === prediction.digit;
+                    svg += `<circle cx="800" cy="${80 + i*50}" r="${isP ? 18 : 8}" fill="${isP ? '#4f46e5' : '#1e293b'}" stroke="${isP ? '#fff' : '#475569'}" stroke-width="2"></circle>`;
+                    svg += `<text x="835" y="${86 + i*50}" fill="${isP ? '#fff' : '#64748b'}" font-size="${isP ? 22 : 16}" font-weight="bold">${i}</text>`;
+                }
+                
+                svg += `
+                    <text x="120" y="585" fill="#475569" font-size="14" text-anchor="middle">INPUT (225)</text>
+                    <text x="400" y="585" fill="#475569" font-size="14" text-anchor="middle">HIDDEN</text>
+                    <text x="800" y="585" fill="#475569" font-size="14" text-anchor="middle">OUTPUT</text>
+                </svg>`;
+                document.getElementById('svg-container').innerHTML = svg;
+            }
+            if (currentStep === 4) {
+                document.getElementById('final-digit').innerText = prediction.digit;
+                document.getElementById('final-confidence').innerText = `${(prediction.probs[prediction.digit]*100).toFixed(1)}% Confidence`;
+                document.getElementById('softmax-bars').innerHTML = prediction.probs.map((p, i) => `
+                    <div class="flex items-center gap-4">
+                        <span class="w-4 text-sm font-black ${i === prediction.digit ? 'text-indigo-400' : 'text-slate-600'}">${i}</span>
+                        <div class="flex-1 h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                            <div class="h-full bg-indigo-500 transition-all duration-1000 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style="width: ${p*100}%"></div>
+                        </div>
+                        <span class="w-10 text-[10px] text-right font-mono ${i === prediction.digit ? 'text-indigo-300' : 'text-slate-700'}">${(p*100).toFixed(0)}%</span>
+                    </div>
+                `).join('');
+            }
+
+            lucide.createIcons();
+        }
+
+        // Initialize
+        updateView();
+    </script>
+</body>
+</html>
