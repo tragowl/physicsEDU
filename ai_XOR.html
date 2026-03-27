@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XOR Matrix Engine (Turbo & Momentum)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #020617; color: #e2e8f0; overflow: hidden; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .chalk-font { font-family: 'Comic Sans MS', cursive, sans-serif; }
+        
+        .link { fill: none; stroke: #334155; stroke-width: 2px; transition: stroke-width 0.1s, stroke 0.1s, opacity 0.1s; opacity: 0.3; }
+        .link-forward { stroke: #fbce07; stroke-width: 4px; opacity: 0.9; stroke-dasharray: 8; animation: dash-fwd 0.4s linear infinite; filter: drop-shadow(0 0 6px rgba(251,206,7,0.6)); }
+        .link-backward { stroke: #10b981; stroke-width: 4px; opacity: 0.9; stroke-dasharray: 8; animation: dash-bwd 0.4s linear infinite; filter: drop-shadow(0 0 6px rgba(16,185,129,0.6)); }
+        .link-loss { stroke: #ef4444; stroke-width: 3px; stroke-dasharray: 5; opacity: 0.8; animation: dash-fwd 0.5s linear infinite; }
+        
+        .link-highlight { stroke: #fbce07 !important; stroke-width: 5px !important; opacity: 1 !important; filter: drop-shadow(0 0 8px rgba(251,206,7,0.8)); }
+        .link-dimmed { opacity: 0.05 !important; }
+
+        @keyframes dash-fwd { to { stroke-dashoffset: -16; } }
+        @keyframes dash-bwd { to { stroke-dashoffset: 16; } }
+
+        .node { transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); stroke-width: 3px; }
+        .node-active { stroke: #fbce07; filter: drop-shadow(0 0 12px rgba(251,206,7,0.8)); transform: scale(1.15); }
+        .node-active-bwd { stroke: #10b981; filter: drop-shadow(0 0 12px rgba(16,185,129,0.8)); transform: scale(1.15); }
+        .node-truth { stroke: #10b981; fill: #064e3b; }
+        
+        .node-hover-glow {
+            stroke: #fbce07 !important;
+            fill: #1e1b04 !important;
+            stroke-width: 4px !important;
+            filter: drop-shadow(0 0 18px rgba(251,206,7,1)) !important;
+            transform: scale(1.3) !important;
+        }
+
+        .matrix-container { fill: #0f172a; stroke: #334155; stroke-width: 2px; transition: all 0.1s; }
+        .matrix-active { stroke: #fbce07; stroke-width: 3px; filter: drop-shadow(0 0 10px rgba(251,206,7,0.3)); }
+        .matrix-active-bwd { stroke: #10b981; stroke-width: 3px; filter: drop-shadow(0 0 10px rgba(16,185,129,0.3)); }
+        
+        .matrix-cell { cursor: pointer; transition: all 0.1s; }
+        .matrix-cell:hover { font-weight: 900; transform: scale(1.2); }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 14px; height: 14px; border-radius: 50%; 
+            background: #eab308; cursor: pointer;
+            box-shadow: 0 0 5px rgba(234,179,8,0.5);
+        }
+        input[type=range].emerald-thumb::-webkit-slider-thumb {
+            background: #10b981; box-shadow: 0 0 5px rgba(16,185,129,0.5);
+        }
+        input[type=range].rose-thumb::-webkit-slider-thumb {
+            background: #f43f5e; box-shadow: 0 0 8px rgba(244,63,94,0.8); transform: scale(1.2);
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col">
+    
+    <!-- Top Header -->
+    <div class="h-24 px-8 py-4 flex justify-between items-center border-b border-slate-800 bg-slate-900/50 z-10 relative shadow-md">
+        <div>
+            <h1 class="text-3xl font-black text-white tracking-tight">XOR <span class="text-yellow-400">MATRIX</span> ENGINE</h1>
+            <p class="text-slate-400 text-sm mt-1">Speed 슬라이더를 x30 이상 올리면 <span class="text-rose-400 font-bold">터보 모드(다중 에폭 점프)</span>가 발동됩니다.</p>
+        </div>
+        <div class="flex gap-4">
+            
+            <!-- Learning Rate Control -->
+            <div class="bg-slate-800/80 px-5 py-3 rounded-xl border border-slate-700 flex flex-col justify-center min-w-[140px]">
+                <div class="flex justify-between w-full mb-1.5">
+                    <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Learning Rate</span>
+                    <span id="lr-val" class="text-[12px] text-yellow-400 font-mono font-bold">1.5</span>
+                </div>
+                <input type="range" id="lr-slider" min="0.1" max="5.0" step="0.1" value="1.5" class="w-full h-1.5 bg-slate-900 rounded-lg appearance-none cursor-pointer mt-1" oninput="updateLR(this.value)">
+            </div>
+
+            <!-- Speed Control -->
+            <div class="bg-slate-800/80 px-5 py-3 rounded-xl border border-slate-700 flex flex-col justify-center min-w-[140px]">
+                <div class="flex justify-between w-full mb-1.5">
+                    <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Auto Speed</span>
+                    <span id="speed-val" class="text-[12px] text-emerald-400 font-mono font-bold">x3</span>
+                </div>
+                <input type="range" id="speed-slider" min="1" max="60" step="1" value="3" class="w-full h-1.5 bg-slate-900 rounded-lg appearance-none cursor-pointer mt-1 emerald-thumb" oninput="updateSpeed(this.value)">
+            </div>
+            
+            <!-- Reset Button -->
+            <button onclick="resetEngine()" class="bg-slate-800 hover:bg-rose-900/50 text-slate-300 hover:text-rose-400 px-4 py-3 rounded-xl border border-slate-700 hover:border-rose-500/50 flex items-center justify-center transition-all shadow-sm group" title="엔진 초기화">
+                <svg class="w-6 h-6 group-hover:-rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+
+            <!-- Auto Run Button -->
+            <button id="auto-btn" onclick="toggleAutoPlay()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl border border-indigo-500 flex items-center gap-4 transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)] min-w-[180px]">
+                <div class="relative flex h-4 w-4">
+                  <span id="auto-ping" class="absolute inline-flex h-full w-full rounded-full bg-white opacity-0 transition-opacity"></span>
+                  <span id="auto-dot" class="relative inline-flex rounded-full h-4 w-4 bg-white/40 transition-colors"></span>
+                </div>
+                <div class="flex flex-col items-start">
+                    <span class="text-[10px] font-bold tracking-widest uppercase opacity-80" id="auto-label">Auto Run</span>
+                    <span class="text-xl font-black tracking-wide leading-none" id="auto-text">START</span>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Canvas -->
+    <div class="flex-1 relative overflow-hidden flex flex-col bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0iIzMzNDE1NSIvPjwvc3ZnPg==')]">
+        
+        <div class="flex-1 relative w-full h-full" id="board-container">
+            <svg id="svg-canvas" class="w-full h-full absolute inset-0"></svg>
+        </div>
+
+        <!-- Bottom Control Panel -->
+        <div id="info-panel" class="bg-slate-900/95 border-t border-slate-700 p-6 flex flex-col gap-4 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+            <div class="max-w-6xl mx-auto w-full flex justify-between items-center">
+                <div class="flex items-center gap-6">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-800 border-2 border-slate-700 flex items-center justify-center flex-shrink-0 transition-colors" id="step-indicator">
+                        <span class="text-3xl font-black text-slate-400" id="step-num">0</span>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-1" id="step-title">엔진 대기 중</h2>
+                        <p class="text-slate-400 text-sm max-w-xl leading-relaxed" id="step-desc">
+                            우측 상단의 START 버튼을 눌러 자동 학습을 시작하거나, 하단 버튼으로 수동 진행하세요.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-4 items-center">
+                    <button onclick="resetEngine()" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-rose-400 uppercase transition hover:bg-slate-800 rounded-lg">Reset</button>
+                    <div id="manual-controls" class="flex bg-slate-800/80 rounded-full p-1.5 border border-white/10 shadow-lg transition-opacity duration-300">
+                        <button onclick="nextStep()" id="main-btn" class="px-10 py-3.5 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-full transition-all text-base min-w-[240px] shadow-[0_0_20px_rgba(251,206,7,0.3)]">
+                            MANUAL START
+                        </button>
+                        <button onclick="nextStep()" class="p-3.5 hover:bg-slate-700 rounded-full transition text-white ml-1">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentLearningRate = 1.5;
+        let currentStep = 0;
+        let epochCount = 0;
+        let epochData = null; 
+        
+        let autoPlayTimer = null;
+        let isAutoPlaying = false;
+        let autoSpeedDelay = 333; 
+
+        function updateLR(val) {
+            currentLearningRate = parseFloat(val);
+            document.getElementById('lr-val').innerText = currentLearningRate.toFixed(1);
+        }
+
+        function updateSpeed(val) {
+            const speedMultiplier = parseInt(val);
+            document.getElementById('speed-val').innerText = `x${speedMultiplier}`;
+            
+            const slider = document.getElementById('speed-slider');
+            const valText = document.getElementById('speed-val');
+            
+            if (speedMultiplier >= 30) {
+                slider.classList.remove('emerald-thumb'); slider.classList.add('rose-thumb');
+                valText.className = "text-[12px] text-rose-500 font-mono font-black animate-pulse";
+                valText.innerText = `🔥 TURBO x${speedMultiplier}`;
+                autoSpeedDelay = 16; 
+            } else {
+                slider.classList.add('emerald-thumb'); slider.classList.remove('rose-thumb');
+                valText.className = "text-[12px] text-emerald-400 font-mono font-bold";
+                autoSpeedDelay = 1000 / speedMultiplier;
+            }
+            updateUI();
+        }
+
+        function toggleAutoPlay() {
+            isAutoPlaying = !isAutoPlaying;
+            
+            const btn = document.getElementById('auto-btn');
+            const ping = document.getElementById('auto-ping');
+            const dot = document.getElementById('auto-dot');
+            const text = document.getElementById('auto-text');
+            const manualControls = document.getElementById('manual-controls');
+            const mainBtn = document.getElementById('main-btn');
+            
+            if (isAutoPlaying) {
+                btn.className = "bg-rose-600 hover:bg-rose-500 text-white px-8 py-3 rounded-xl border border-rose-500 flex items-center gap-4 transition-all shadow-[0_0_15px_rgba(225,29,72,0.4)] min-w-[180px]";
+                ping.classList.remove('opacity-0'); ping.classList.add('animate-ping');
+                dot.className = "relative inline-flex rounded-full h-4 w-4 bg-white";
+                text.innerText = "STOP";
+                
+                manualControls.classList.add('opacity-40', 'pointer-events-none');
+                mainBtn.innerText = "AUTO RUNNING ⚡";
+
+                if (currentStep === 0) nextStep();
+                autoStep();
+            } else {
+                btn.className = "bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl border border-indigo-500 flex items-center gap-4 transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)] min-w-[180px]";
+                ping.classList.add('opacity-0'); ping.classList.remove('animate-ping');
+                dot.className = "relative inline-flex rounded-full h-4 w-4 bg-white/40 transition-colors";
+                text.innerText = "START";
+                
+                manualControls.classList.remove('opacity-40', 'pointer-events-none');
+                updateUI(); 
+                clearTimeout(autoPlayTimer);
+            }
+        }
+
+        const MathEngine = {
+            zeros: (r, c) => Array(r).fill(0).map(() => Array(c).fill(0)),
+            sigmoid: (x) => 1 / (1 + Math.exp(-x)),
+            dsigmoid: (y) => y * (1 - y),
+            matMul: (A, B) => {
+                let res = Array(A.length).fill(0).map(() => Array(B[0].length).fill(0));
+                for(let i=0; i<A.length; i++) for(let j=0; j<B[0].length; j++) for(let k=0; k<A[0].length; k++) res[i][j] += A[i][k] * B[k][j];
+                return res;
+            },
+            matAdd: (A, B) => A.map((row, i) => row.map((val, j) => val + (B.length === 1 ? B[0][j] : B[i][j]))),
+            matSub: (A, B) => A.map((row, i) => row.map((val, j) => val - B[i][j])),
+            mapMat: (A, fn) => A.map(row => row.map(val => fn(val))),
+            dotMult: (A, B) => A.map((row, i) => row.map((val, j) => val * B[i][j])),
+            transpose: (A) => A[0].map((_, col) => A.map(row => row[col])),
+            sumRows: (A) => {
+                let res = Array(1).fill(0).map(() => Array(A[0].length).fill(0));
+                for(let i=0; i<A.length; i++) for(let j=0; j<A[0].length; j++) res[0][j] += A[i][j];
+                return res;
+            },
+            scalarMul: (A, scalar) => A.map(row => row.map(val => val * scalar))
+        };
+
+        const X = [[0,0], [0,1], [1,0], [1,1]];
+        const Y = [[0], [1], [1], [0]];
+        const strX = ["[0, 0]", "[0, 1]", "[1, 0]", "[1, 1]"];
+        
+        // 원본 가중치 보존용 (리셋 시 사용)
+        const initialNet = {
+            w1: [[ 0.8, -0.9], [-1.2,  1.1]],        b1: [[-0.5,  0.5]],
+            w2: [[ 1.2, -0.8,  1.0], [-1.0,  1.4, -0.9]], b2: [[ 0.2, -0.3,  0.4]],
+            w3: [[-1.2], [ 1.5], [-1.0]],               b3: [[ 0.1]]
+        };
+
+        // 깊은 복사(Deep Copy) 함수
+        const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
+
+        let net = deepCopy(initialNet);
+
+        let vel = {
+            w1: MathEngine.zeros(2,2), b1: MathEngine.zeros(1,2),
+            w2: MathEngine.zeros(2,3), b2: MathEngine.zeros(1,3),
+            w3: MathEngine.zeros(3,1), b3: MathEngine.zeros(1,1)
+        };
+        const MU = 0.9;
+
+        function calculateEpoch() {
+            let Z1 = MathEngine.matAdd(MathEngine.matMul(X, net.w1), net.b1);
+            let A1 = MathEngine.mapMat(Z1, MathEngine.sigmoid);
+            let Z2 = MathEngine.matAdd(MathEngine.matMul(A1, net.w2), net.b2);
+            let A2 = MathEngine.mapMat(Z2, MathEngine.sigmoid);
+            let Z3 = MathEngine.matAdd(MathEngine.matMul(A2, net.w3), net.b3);
+            let A3 = MathEngine.mapMat(Z3, MathEngine.sigmoid);
+
+            let Error = MathEngine.matSub(A3, Y);
+            let MSE = Error.reduce((sum, row) => sum + row[0]*row[0], 0) / 4;
+
+            let dZ3 = MathEngine.dotMult(Error, MathEngine.mapMat(A3, MathEngine.dsigmoid));
+            let dW3 = MathEngine.matMul(MathEngine.transpose(A2), dZ3);
+            let dB3 = MathEngine.sumRows(dZ3);
+
+            let dA2 = MathEngine.matMul(dZ3, MathEngine.transpose(net.w3));
+            let dZ2 = MathEngine.dotMult(dA2, MathEngine.mapMat(A2, MathEngine.dsigmoid));
+            let dW2 = MathEngine.matMul(MathEngine.transpose(A1), dZ2);
+            let dB2 = MathEngine.sumRows(dZ2);
+
+            let dA1 = MathEngine.matMul(dZ2, MathEngine.transpose(net.w2));
+            let dZ1 = MathEngine.dotMult(dA1, MathEngine.mapMat(A1, MathEngine.dsigmoid));
+            let dW1 = MathEngine.matMul(MathEngine.transpose(X), dZ1);
+            let dB1 = MathEngine.sumRows(dZ1);
+
+            return { A1, A2, A3, MSE, grads: { dW3, dB3, dW2, dB2, dW1, dB1 } };
+        }
+
+        function applyAllGradients(grads) {
+            vel.w3 = MathEngine.matAdd(MathEngine.scalarMul(vel.w3, MU), MathEngine.scalarMul(grads.dW3, currentLearningRate));
+            net.w3 = MathEngine.matSub(net.w3, vel.w3);
+            vel.b3 = MathEngine.matAdd(MathEngine.scalarMul(vel.b3, MU), MathEngine.scalarMul(grads.dB3, currentLearningRate));
+            net.b3 = MathEngine.matSub(net.b3, vel.b3);
+            
+            vel.w2 = MathEngine.matAdd(MathEngine.scalarMul(vel.w2, MU), MathEngine.scalarMul(grads.dW2, currentLearningRate));
+            net.w2 = MathEngine.matSub(net.w2, vel.w2);
+            vel.b2 = MathEngine.matAdd(MathEngine.scalarMul(vel.b2, MU), MathEngine.scalarMul(grads.dB2, currentLearningRate));
+            net.b2 = MathEngine.matSub(net.b2, vel.b2);
+            
+            vel.w1 = MathEngine.matAdd(MathEngine.scalarMul(vel.w1, MU), MathEngine.scalarMul(grads.dW1, currentLearningRate));
+            net.w1 = MathEngine.matSub(net.w1, vel.w1);
+            vel.b1 = MathEngine.matAdd(MathEngine.scalarMul(vel.b1, MU), MathEngine.scalarMul(grads.dB1, currentLearningRate));
+            net.b1 = MathEngine.matSub(net.b1, vel.b1);
+        }
+
+        function autoStep() {
+            if (!isAutoPlaying) return;
+            
+            let speedMult = parseInt(document.getElementById('speed-slider').value);
+            
+            if (speedMult >= 30) {
+                let loops = speedMult >= 50 ? 50 : 20; 
+                for(let i=0; i<loops; i++) {
+                    epochData = calculateEpoch();
+                    applyAllGradients(epochData.grads);
+                    epochCount++;
+                }
+                currentStep = 6; 
+                updateUI();
+                draw();
+                autoPlayTimer = setTimeout(autoStep, 16);
+            } else {
+                nextStep();
+                autoPlayTimer = setTimeout(autoStep, autoSpeedDelay);
+            }
+        }
+
+        function nextStep() { 
+            if (currentStep === 0) {
+                epochData = calculateEpoch();
+                currentStep = 1;
+            } else {
+                currentStep++;
+            }
+
+            if (currentStep === 8) {
+                vel.w3 = MathEngine.matAdd(MathEngine.scalarMul(vel.w3, MU), MathEngine.scalarMul(epochData.grads.dW3, currentLearningRate));
+                vel.b3 = MathEngine.matAdd(MathEngine.scalarMul(vel.b3, MU), MathEngine.scalarMul(epochData.grads.dB3, currentLearningRate));
+                net.w3 = MathEngine.matSub(net.w3, vel.w3);
+                net.b3 = MathEngine.matSub(net.b3, vel.b3);
+            } else if (currentStep === 9) {
+                vel.w2 = MathEngine.matAdd(MathEngine.scalarMul(vel.w2, MU), MathEngine.scalarMul(epochData.grads.dW2, currentLearningRate));
+                vel.b2 = MathEngine.matAdd(MathEngine.scalarMul(vel.b2, MU), MathEngine.scalarMul(epochData.grads.dB2, currentLearningRate));
+                net.w2 = MathEngine.matSub(net.w2, vel.w2);
+                net.b2 = MathEngine.matSub(net.b2, vel.b2);
+            } else if (currentStep === 10) {
+                vel.w1 = MathEngine.matAdd(MathEngine.scalarMul(vel.w1, MU), MathEngine.scalarMul(epochData.grads.dW1, currentLearningRate));
+                vel.b1 = MathEngine.matAdd(MathEngine.scalarMul(vel.b1, MU), MathEngine.scalarMul(epochData.grads.dB1, currentLearningRate));
+                net.w1 = MathEngine.matSub(net.w1, vel.w1);
+                net.b1 = MathEngine.matSub(net.b1, vel.b1);
+            } else if (currentStep === 12) {
+                epochCount++;
+                epochData = calculateEpoch();
+                currentStep = 1;
+            }
+            
+            updateUI(); draw(); 
+        }
+
+        function updateUI() {
+            let speedMult = parseInt(document.getElementById('speed-slider').value);
+            const stepNumEl = document.getElementById('step-num');
+            const ind = document.getElementById('step-indicator');
+            const titleEl = document.getElementById('step-title');
+            const descEl = document.getElementById('step-desc');
+
+            if (isAutoPlaying && speedMult >= 30) {
+                stepNumEl.innerText = `${epochCount}`;
+                stepNumEl.className = "text-2xl font-black text-rose-500 animate-pulse";
+                ind.className = "w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors bg-rose-500/20 border-2 border-rose-500/50";
+                
+                titleEl.innerHTML = `🔥 터보 모드 가동 중 <span class="text-sm font-normal text-slate-400 ml-2">(${epochData ? '오차: ' + epochData.MSE.toFixed(5) : ''})</span>`;
+                descEl.innerText = `애니메이션을 생략하고 모멘텀(Momentum) 최적화를 통해 초당 수십~수백 번의 에폭(Epoch)을 처리하며 정답에 빠르게 수렴합니다.`;
+                return;
+            }
+
+            if (currentStep === 0 && epochCount === 0) {
+                stepNumEl.innerText = "0";
+                stepNumEl.className = "text-3xl font-black text-slate-400";
+            } else {
+                stepNumEl.innerText = `${epochCount + 1}-${currentStep}`;
+                let colorClass = "text-slate-400";
+                if(currentStep >= 1 && currentStep <= 7) colorClass = "text-yellow-500";
+                else if(currentStep >= 8 && currentStep <= 10) colorClass = "text-emerald-500";
+                stepNumEl.className = `text-2xl tracking-tighter font-black ${colorClass}`;
+            }
+
+            if(currentStep >= 1 && currentStep <= 7) ind.className = "w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors bg-yellow-500/20 border-2 border-yellow-500/50";
+            else if(currentStep >= 8 && currentStep <= 10) ind.className = "w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors bg-emerald-500/20 border-2 border-emerald-500/50";
+            else ind.className = "w-16 h-16 rounded-2xl bg-slate-800 border-2 border-slate-700 flex items-center justify-center flex-shrink-0 transition-colors";
+
+            const labels = [
+                "엔진 대기 중", "순전파: 입력 → 은닉층 1 연산", "순전파: 시그모이드(Sigmoid) 활성화", 
+                "순전파: 은닉층 1 → 은닉층 2 연산", "순전파: 시그모이드(Sigmoid) 활성화", "순전파: 은닉층 2 → 출력 연산", 
+                "순전파: 출력 도출 (예측 완료)", "Loss(오차) 계산: 예측 vs 정답", 
+                "역전파: 출력층(L3) 가중치/편향 업데이트", "역전파: 은닉층2(L2) 가중치/편향 업데이트", 
+                "역전파: 은닉층1(L1) 가중치/편향 업데이트", "에폭 학습 완료"
+            ];
+            const descs = [
+                "우측 상단의 START 버튼을 눌러 자동 학습을 시작하거나, 하단 버튼으로 수동 진행하세요.",
+                "4개의 입력 데이터가 가중치 행렬 W1과 내적되어 은닉층 1로 전달됩니다.",
+                "노드별 고유값인 편향 B1이 더해지고, 시그모이드 함수를 통과하여 비선형성을 갖습니다.",
+                "은닉층 1의 결과가 다음 가중치 W2를 거쳐 은닉층 2로 전달됩니다.",
+                "노드별 편향 B2가 더해지고, 다시 시그모이드 활성화 함수를 통과합니다.",
+                "마지막 은닉층 결과가 출력 가중치 W3와 결합되어 최종 출력 노드로 이동합니다.",
+                "출력층 편향 B3가 더해져 각 데이터에 대한 최종 예측값(0~1)이 산출되었습니다.",
+                "도출된 예측값과 실제 정답을 비교하여 오차(MSE)를 계산합니다.",
+                "역전파: 오차를 바탕으로 모멘텀을 더해 W3, B3 행렬 수치를 조정합니다.",
+                "역전파: 오차가 거꾸로 흘러 W2, B2 행렬의 수치를 최적화 방향으로 조정합니다.",
+                "역전파: 초기 은닉층까지 오차가 도달하여 W1, B1을 수정하며 에폭을 마칩니다.",
+                "1 에폭이 완료되었습니다. 예측값이 정답에 점점 수렴하는지 관찰하세요."
+            ];
+            
+            if (labels[currentStep]) {
+                titleEl.innerHTML = labels[currentStep] + (currentStep === 7 && epochData ? ` <span class="text-sm font-normal text-rose-400 ml-2">(MSE: ${epochData.MSE.toFixed(5)})</span>` : '');
+                descEl.innerText = descs[currentStep];
+                
+                if (!isAutoPlaying) {
+                    let btnText = labels[currentStep];
+                    if (currentStep === 0) btnText = "MANUAL START";
+                    if (currentStep === 11) btnText = "NEXT EPOCH 🚀";
+                    document.getElementById('main-btn').innerText = btnText;
+                }
+            }
+        }
+
+        // 소프트 리셋 함수 (새로고침 없이 내부 상태만 초기화)
+        function resetEngine() {
+            if (isAutoPlaying) {
+                toggleAutoPlay(); // 오토플레이 중지
+            }
+            
+            // 네트워크 & 모멘텀 초기화
+            net = deepCopy(initialNet);
+            vel = {
+                w1: MathEngine.zeros(2,2), b1: MathEngine.zeros(1,2),
+                w2: MathEngine.zeros(2,3), b2: MathEngine.zeros(1,3),
+                w3: MathEngine.zeros(3,1), b3: MathEngine.zeros(1,1)
+            };
+            
+            // 상태 변수 초기화
+            currentStep = 0;
+            epochCount = 0;
+            epochData = null;
+            
+            updateUI();
+            draw();
+        }
+
+        const svg = d3.select("#svg-canvas");
+
+        function draw() {
+            const w = document.getElementById('board-container').clientWidth;
+            const h = document.getElementById('board-container').clientHeight;
+            if (!w || !h) return;
+            svg.selectAll("*").remove();
+
+            const layerX = [w * 0.12, w * 0.35, w * 0.58, w * 0.81, w * 0.93];
+            const nodes = [];
+            const centerY = h * 0.68; 
+            const spacing = h * 0.12;
+
+            const addNodes = (layerIdx, count) => {
+                const startY = centerY - (count - 1) * spacing / 2;
+                for(let i=0; i<count; i++) {
+                    nodes.push({ id: `L${layerIdx}-${i}`, x: layerX[layerIdx], y: startY + i * spacing, layer: layerIdx, idx: i });
+                }
+            };
+
+            addNodes(0, 4); // Input
+            addNodes(1, 2); // Hidden 1
+            addNodes(2, 3); // Hidden 2
+            addNodes(3, 4); // Output
+            addNodes(4, 4); // Truth
+
+            const midX1 = (layerX[0] + layerX[1]) / 2;
+            const midX2 = (layerX[1] + layerX[2]) / 2;
+            const midX3 = (layerX[2] + layerX[3]) / 2;
+            
+            const mxY_W = h * 0.18; 
+            const mxY_B = h * 0.35; 
+            
+            const drawMatrix = (mx, my, data, title, isFwd, isBwd, layerKey) => {
+                const cellW = 70, cellH = 32;
+                const rows = data.length, cols = data[0].length;
+                const g = svg.append("g").attr("transform", `translate(${mx - (cols*cellW)/2}, ${my - (rows*cellH)/2})`);
+                
+                let boxCls = 'matrix-container';
+                if (isFwd) boxCls += ' matrix-active';
+                else if (isBwd) boxCls += ' matrix-active-bwd';
+
+                g.append("rect").attr("width", cols*cellW).attr("height", rows*cellH).attr("rx", 6).attr("class", boxCls);
+                g.append("text").attr("x", (cols*cellW)/2).attr("y", -10).attr("text-anchor", "middle").attr("class", "chalk-font fill-slate-400 text-sm tracking-wider").text(title);
+
+                data.forEach((row, r) => {
+                    row.forEach((val, c) => {
+                        let textCol = 'fill-white';
+                        if (currentStep === 10 && layerKey.startsWith('w1')) textCol = 'fill-emerald-400 font-black';
+                        if (currentStep === 9 && layerKey.startsWith('w2')) textCol = 'fill-emerald-400 font-black';
+                        if (currentStep === 8 && layerKey.startsWith('w3')) textCol = 'fill-emerald-400 font-black';
+                        if (currentStep === 10 && layerKey.startsWith('b1')) textCol = 'fill-emerald-400 font-black';
+                        if (currentStep === 9 && layerKey.startsWith('b2')) textCol = 'fill-emerald-400 font-black';
+                        if (currentStep === 8 && layerKey.startsWith('b3')) textCol = 'fill-emerald-400 font-black';
+                        
+                        g.append("text")
+                            .attr("x", c*cellW + cellW/2).attr("y", r*cellH + cellH/2 + 5)
+                            .attr("text-anchor", "middle")
+                            .attr("class", `mono matrix-cell text-base ${textCol}`)
+                            .text(val.toFixed(3))
+                            .on("mouseenter", function() {
+                                d3.select(this).classed("fill-yellow-400 scale-125", true).classed("fill-white", false);
+                                svg.selectAll('.link').classed('link-dimmed', true);
+                                svg.selectAll('.node').classed('node-hover-glow', false);
+
+                                let popupY = my - (rows*cellH)/2 - 35;
+
+                                if (layerKey === 'w1') svg.selectAll(`.link-L0-L1-t${c}`).classed('link-highlight', true).classed('link-dimmed', false);
+                                else if (layerKey === 'w2') svg.selectAll(`.link-L1-L2-t${c}`).classed('link-highlight', true).classed('link-dimmed', false);
+                                else if (layerKey === 'w3') svg.selectAll(`.link-L2-L3-s${r}`).classed('link-highlight', true).classed('link-dimmed', false);
+                                else if (layerKey === 'b1') { svg.selectAll('.link').classed('link-dimmed', false); svg.select(`#node-L1-i${c}`).classed('node-hover-glow', true); popupY += 15; }
+                                else if (layerKey === 'b2') { svg.selectAll('.link').classed('link-dimmed', false); svg.select(`#node-L2-i${c}`).classed('node-hover-glow', true); popupY += 15; }
+                                else if (layerKey === 'b3') { svg.selectAll('.link').classed('link-dimmed', false); for(let i=0; i<4; i++) svg.select(`#node-L3-i${i}`).classed('node-hover-glow', true); popupY += 15; }
+
+                                svg.append("text").attr("id", "hover-val-popup")
+                                   .attr("x", mx).attr("y", popupY).attr("text-anchor", "middle")
+                                   .attr("class", "mono text-3xl fill-yellow-400 font-black drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)]")
+                                   .text(val.toFixed(4));
+                            })
+                            .on("mouseleave", function() {
+                                d3.select(this).classed("fill-yellow-400 scale-125", false).classed("fill-white", true);
+                                svg.selectAll('.link').classed('link-dimmed', false).classed('link-highlight', false);
+                                svg.selectAll('.node').classed('node-hover-glow', false);
+                                svg.select("#hover-val-popup").remove();
+                            });
+                    });
+                });
+            };
+
+            drawMatrix(midX1, mxY_W, net.w1, "W1 (2x2)", currentStep==1, currentStep==10, 'w1');
+            drawMatrix(midX1, mxY_B, net.b1, "B1 (1x2)", currentStep==2, currentStep==10, 'b1');
+            drawMatrix(midX2, mxY_W, net.w2, "W2 (2x3)", currentStep==3, currentStep==9, 'w2');
+            drawMatrix(midX2, mxY_B, net.b2, "B2 (1x3)", currentStep==4, currentStep==9, 'b2');
+            drawMatrix(midX3, mxY_W, net.w3, "W3 (3x1)", currentStep==5, currentStep==8, 'w3');
+            drawMatrix(midX3, mxY_B, net.b3, "B3 (1x1)", currentStep==6, currentStep==8, 'b3');
+
+            const drawNetworkLinks = (fromLvl, toLvl, fStep, bStep) => {
+                const fromN = nodes.filter(n => n.layer === fromLvl);
+                const toN = nodes.filter(n => n.layer === toLvl);
+                fromN.forEach(source => {
+                    toN.forEach(target => {
+                        let cls = `link link-L${fromLvl}-L${toLvl}-s${source.idx} link-L${fromLvl}-L${toLvl}-t${target.idx}`;
+                        if (currentStep === fStep) cls += " link-forward";
+                        else if (currentStep === bStep) cls += " link-backward";
+                        
+                        let speedMult = parseInt(document.getElementById('speed-slider').value);
+                        if(isAutoPlaying && speedMult >= 30) {
+                            cls += " stroke-yellow-500/30";
+                        }
+                        
+                        const path = d3.linkHorizontal()({source: [source.x, source.y], target: [target.x, target.y]});
+                        svg.append("path").attr("class", cls).attr("d", path);
+                    });
+                });
+            };
+
+            drawNetworkLinks(0, 1, 1, 10); 
+            drawNetworkLinks(1, 2, 3, 9);  
+            drawNetworkLinks(2, 3, 5, 8);  
+
+            nodes.filter(n => n.layer === 3).forEach(source => {
+                const target = nodes.find(n => n.layer === 4 && n.idx === source.idx);
+                let cls = "link";
+                if(currentStep === 7) cls += " link-loss";
+                const path = d3.linkHorizontal()({source: [source.x, source.y], target: [target.x, target.y]});
+                svg.append("path").attr("class", cls).attr("d", path);
+            });
+
+            nodes.forEach(n => {
+                const g = svg.append("g").attr("transform", `translate(${n.x}, ${n.y})`);
+                const nodeId = `node-L${n.layer}-i${n.idx}`; 
+                
+                if (n.layer === 0) {
+                    let strokeCol = "#475569";
+                    if (currentStep === 1) strokeCol = "#fbce07"; 
+                    if (currentStep === 10) strokeCol = "#10b981"; 
+                    
+                    g.append("rect").attr("id", nodeId).attr("x", -28).attr("y", -18).attr("width", 56).attr("height", 36).attr("rx", 6)
+                        .attr("fill", "#0f172a").attr("stroke", strokeCol).attr("stroke-width", 2)
+                        .attr("class", "node");
+                    g.append("text").attr("text-anchor", "middle").attr("dy", "5").attr("class", "mono text-sm fill-slate-300 font-bold tracking-widest").text(strX[n.idx]);
+                } 
+                else if (n.layer === 4) {
+                    g.append("circle").attr("id", nodeId).attr("r", 20).attr("class", "node node-truth").attr("fill", "#064e3b").attr("stroke", "#10b981");
+                    g.append("text").attr("text-anchor", "middle").attr("dy", "5").attr("class", "mono text-lg fill-white font-bold").text(Y[n.idx][0]);
+                }
+                else {
+                    let col = "#334155";
+                    let fillCol = "#050a09";
+                    let innerText = "";
+                    let textCls = "mono text-sm fill-slate-400";
+                    let isSigmoidActive = false;
+                    
+                    if (n.layer == 1 && currentStep >= 2) { col = "#fbce07"; if(currentStep==2) { isSigmoidActive=true; fillCol="#1e1b04"; } }
+                    if (n.layer == 2 && currentStep >= 4) { col = "#fbce07"; if(currentStep==4) { isSigmoidActive=true; fillCol="#1e1b04"; } }
+                    
+                    if (n.layer == 3) {
+                        if (currentStep >= 6) {
+                            col = "#10b981"; 
+                            if(currentStep==6) fillCol="#064e3b";
+                            if(epochData && epochData.A3) {
+                                innerText = epochData.A3[n.idx][0].toFixed(2);
+                                textCls = "mono text-base fill-white font-bold drop-shadow";
+                                if (Math.abs(epochData.A3[n.idx][0] - Y[n.idx][0]) < 0.1) col = "#34d399";
+                            }
+                        } else {
+                            innerText = "-";
+                        }
+                    } else {
+                        if(isSigmoidActive) { innerText = "σ"; textCls = "mono text-2xl fill-yellow-400 font-black drop-shadow"; }
+                    }
+                    
+                    let cClass = "node";
+                    if(isSigmoidActive || (n.layer==3 && currentStep==6)) cClass += " node-active";
+                    
+                    let isBwdActive = false;
+                    if (currentStep === 8 && (n.layer === 2 || n.layer === 3)) isBwdActive = true; 
+                    if (currentStep === 9 && (n.layer === 1 || n.layer === 2)) isBwdActive = true; 
+                    if (currentStep === 10 && n.layer === 1) isBwdActive = true; 
+                    
+                    if(isBwdActive) cClass += " node-active-bwd";
+                    
+                    g.append("circle").attr("id", nodeId).attr("r", 24).attr("class", cClass).attr("fill", fillCol).attr("stroke", col);
+                    if(innerText) g.append("text").attr("text-anchor", "middle").attr("dy", innerText==="σ" ? "8" : "5").attr("class", textCls).text(innerText);
+                }
+
+                if (n.idx === (nodes.filter(nd => nd.layer === n.layer).length - 1)) {
+                    const labels = ["INPUT (X)", "HIDDEN 1", "HIDDEN 2", "OUTPUT (Y')", "TRUTH (T)"];
+                    svg.append("text").attr("x", n.x).attr("y", n.y + 50).attr("text-anchor", "middle").attr("class", "mono text-xs fill-slate-500 font-bold tracking-widest").text(labels[n.layer]);
+                }
+            });
+        }
+
+        window.onload = draw;
+        window.onresize = draw;
+    </script>
+</body>
+</html>
