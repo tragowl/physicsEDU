@@ -11,6 +11,7 @@
         canvas { cursor: crosshair; }
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
         .node-panel { position: absolute; width: 240px; z-index: 100; display: none; pointer-events: auto; }
+        .panel-header { cursor: move; border-bottom: 1px solid rgba(0,0,0,0.05); margin-bottom: 12px; padding-bottom: 8px; }
         input[type=range] { accent-color: #3b82f6; cursor: pointer; }
         .footer-info { position: absolute; bottom: 0; left: 0; width: 100%; padding: 12px 24px; background: rgba(255,255,255,0.7); font-size: 11px; color: #64748b; border-top: 1px solid rgba(0,0,0,0.05); }
         #rasterPanel { position: absolute; bottom: 80px; right: 24px; width: 400px; height: 220px; z-index: 50; display: none; overflow: hidden; }
@@ -40,7 +41,7 @@
         <div class="flex gap-2 items-center">
             <div class="flex bg-slate-100 p-1 rounded-lg gap-1 mr-2">
                 <button id="recordBtn" onclick="toggleRecording()" class="px-3 py-1 bg-white text-slate-700 border border-slate-200 rounded text-xs font-bold hover:bg-slate-50 transition shadow-sm">측정 시작</button>
-                <button id="downloadCsvBtn" onclick="exportCSV()" class="px-3 py-1 bg-slate-200 text-slate-400 border border-slate-300 rounded text-xs font-bold transition opacity-50 cursor-not-allowed" disabled>CSV 분석 저장</button>
+                <div id="statusMsg" class="hidden px-3 py-1 text-[10px] font-bold text-emerald-600 animate-pulse">자동 저장됨</div>
             </div>
 
             <button onclick="toggleRaster()" class="px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded text-xs font-bold hover:bg-amber-100 transition">분석 도구</button>
@@ -70,8 +71,9 @@
             </div>
         </div>
 
+        <!-- 설정창 (Property Panel) - 드래그 가능하도록 헤더 분리 -->
         <div id="propPanel" class="node-panel glass p-4 rounded-xl" onmousedown="event.stopPropagation()">
-            <div class="flex justify-between items-center mb-4">
+            <div id="panelHeader" class="panel-header flex justify-between items-center">
                 <span id="propTitle" class="text-[10px] font-black uppercase text-blue-600">Neuron Setting</span>
                 <button onclick="closePanel()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
             </div>
@@ -129,7 +131,7 @@
 
         <div class="footer-info flex justify-between items-center">
             <div><span class="font-bold">© 2026. SNN Lab</span> | Hierarchy & Grouping Edition</div>
-            <div class="italic text-slate-400 hidden md:block text-[10px]">새로 추가된 뉴런은 <span class="text-amber-500 font-bold">노란 점선</span>으로 표시되며 클릭 시 해제됩니다.</div>
+            <div class="italic text-slate-400 hidden md:block text-[10px]">설정창 헤더를 드래그하여 이동할 수 있습니다.</div>
         </div>
     </main>
 
@@ -137,6 +139,7 @@
         const canvas = document.getElementById('simCanvas');
         const ctx = canvas.getContext('2d');
         const propPanel = document.getElementById('propPanel');
+        const panelHeader = document.getElementById('panelHeader');
         const rasterCanvas = document.getElementById('rasterCanvas');
         const rasterCtx = rasterCanvas.getContext('2d');
         
@@ -158,6 +161,28 @@
         let selectedNodes = []; 
         let selectedElement = null; 
 
+        // --- Panel Dragging Logic ---
+        let isDraggingPanel = false;
+        let panelOffset = { x: 0, y: 0 };
+
+        panelHeader.onmousedown = function(e) {
+            isDraggingPanel = true;
+            panelOffset.x = e.clientX - propPanel.offsetLeft;
+            panelOffset.y = e.clientY - propPanel.offsetTop;
+            e.preventDefault();
+        };
+
+        document.addEventListener('mousemove', function(e) {
+            if (isDraggingPanel) {
+                propPanel.style.left = (e.clientX - panelOffset.x) + 'px';
+                propPanel.style.top = (e.clientY - panelOffset.y) + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            isDraggingPanel = false;
+        });
+
         class Neuron {
             constructor(x, y, type = 'excitatory', id = null) {
                 this.x = x;
@@ -170,7 +195,7 @@
                 this.refractory = 0;
                 this.spikeAnim = 0;
                 this.connections = [];
-                this.isNew = false; // 신규 강조 여부
+                this.isNew = false;
             }
 
             generateCleanId(type) {
@@ -231,6 +256,16 @@
             }
         }
 
+        function getFormattedDate() {
+            const now = new Date();
+            const Y = now.getFullYear();
+            const M = String(now.getMonth() + 1).padStart(2, '0');
+            const D = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            return `${Y}${M}${D}${hh}${mm}`;
+        }
+
         function applyGroup() {
             const groupName = document.getElementById('group_name_input').value.trim();
             if (!groupName || selectedNodes.length === 0) return;
@@ -241,7 +276,7 @@
                 const newId = `${groupName}-${index + 1}`;
                 idMap[oldId] = newId;
                 node.id = newId;
-                node.isNew = false; // 그룹화 시 강조 해제
+                node.isNew = false;
             });
 
             neurons.forEach(n => {
@@ -272,7 +307,7 @@
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'text/plain' });
             const a = document.createElement('a'); 
             a.href = URL.createObjectURL(blob); 
-            a.download = `snn_structure_${new Date().getTime()}.txt`; 
+            a.download = `snn_archi_${getFormattedDate()}.txt`; 
             a.click();
         }
 
@@ -311,31 +346,48 @@
 
         function toggleRecording() {
             const btn = document.getElementById('recordBtn');
-            const csvBtn = document.getElementById('downloadCsvBtn');
             const indicator = document.getElementById('recordingIndicator');
+            const statusMsg = document.getElementById('statusMsg');
+            
             if (!isRecording) {
-                isRecording = true; recordedSpikes = []; recordingStartTime = currentTime;
-                btn.innerText = "측정 종료"; btn.classList.replace('bg-white', 'bg-red-500'); btn.classList.replace('text-slate-700', 'text-white');
-                csvBtn.disabled = true; indicator.classList.remove('hidden'); indicator.classList.add('flex');
+                isRecording = true; 
+                recordedSpikes = []; 
+                recordingStartTime = currentTime;
+                btn.innerText = "측정 종료"; 
+                btn.classList.replace('bg-white', 'bg-red-500'); 
+                btn.classList.replace('text-slate-700', 'text-white');
+                indicator.classList.remove('hidden'); 
+                indicator.classList.add('flex');
+                statusMsg.classList.add('hidden');
             } else {
-                isRecording = false; btn.innerText = "측정 시작"; btn.classList.replace('bg-red-500', 'bg-white'); btn.classList.replace('text-white', 'text-slate-700');
-                csvBtn.disabled = false; csvBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200', 'text-slate-400');
-                csvBtn.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600', 'cursor-pointer');
+                isRecording = false; 
+                btn.innerText = "측정 시작"; 
+                btn.classList.replace('bg-red-500', 'bg-white'); 
+                btn.classList.replace('text-white', 'text-slate-700');
                 indicator.classList.replace('flex', 'hidden');
+                
+                exportCSV();
+
+                statusMsg.classList.remove('hidden');
+                setTimeout(() => statusMsg.classList.add('hidden'), 3000);
             }
         }
 
         function exportCSV() {
+            if (recordedSpikes.length === 0 && !confirm("기록된 데이터가 없습니다. 빈 파일을 저장할까요?")) return;
+
             let csvRows = ["=== SPIKE TIME SERIES ===", "Time_Tick,Neuron_ID,Type,Relative_Time_ms"];
             recordedSpikes.forEach(s => csvRows.push(`${s.time},${s.neuronId},${s.type},${s.time - recordingStartTime}`));
             csvRows.push("\n=== NETWORK STRUCTURE ===", "Neuron_ID,Type,Threshold,Leak");
             neurons.forEach(n => csvRows.push(`${n.id},${n.type},${n.threshold},${n.leak}`));
             csvRows.push("\n=== SYNAPSE WEIGHTS ===", "Source_ID,Target_ID,Weight");
             neurons.forEach(n => n.connections.forEach(c => csvRows.push(`${n.id},${c.targetId},${c.weight}`)));
+            
             const blob = new Blob(["\uFEFF" + csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.href = url; link.download = `snn_analysis_${new Date().getTime()}.csv`;
+            link.href = url; 
+            link.download = `snn_data_${getFormattedDate()}.csv`;
             link.click();
         }
 
@@ -360,9 +412,7 @@
             const clickedNode = neurons.find(n => Math.sqrt(Math.pow(n.x - worldPos.x, 2) + Math.pow(n.y - worldPos.y, 2)) < 30);
 
             if (e.button === 0) {
-                if (clickedNode) {
-                    clickedNode.isNew = false; // 어떤 형태의 인터랙션이든 강조 해제
-                }
+                if (clickedNode) clickedNode.isNew = false;
 
                 if (e.shiftKey && clickedNode) {
                     const idx = selectedNodes.indexOf(clickedNode);
@@ -439,7 +489,6 @@
             if (connectingFrom && hoveredNode && connectingFrom !== hoveredNode) {
                 if (!connectingFrom.connections.find(c => c.targetId === hoveredNode.id)) {
                     connectingFrom.connections.push({ targetId: hoveredNode.id, weight: 0.8 });
-                    hoveredNode.isNew = false; // 연결 대상이 되면 강조 해제
                 }
             }
             draggingNode = null; panning = false; connectingFrom = null;
@@ -480,6 +529,8 @@
         function showPanel(x, y) {
             if (!selectedElement) return;
             propPanel.style.display = 'block';
+            
+            // 패널이 처음 나타날 때의 위치 지정 (사용자 드래그 전)
             if (x && y) {
                 propPanel.style.left = Math.min(x + 20, window.innerWidth - 260) + 'px';
                 propPanel.style.top = Math.min(y - 50, window.innerHeight - 340) + 'px';
@@ -544,10 +595,9 @@
         }
 
         function addNeuron() {
-            // 카메라 중심 시야에 추가
             const pos = screenToWorld(width/2, height/2);
             const newNode = new Neuron(pos.x, pos.y);
-            newNode.isNew = true; // 강조 활성화
+            newNode.isNew = true;
             neurons.push(newNode);
         }
 
@@ -555,11 +605,9 @@
             typeCounters = { E: 1, I: 1, IO: 1 };
             camera = { x: 0, y: 0, zoom: 0.8 };
             neurons = []; spikes = []; spikeHistory = []; currentTime = 0;
-            
             for(let i=0; i<3; i++) neurons.push(new Neuron(-300, -100 + i*100, 'io'));
             for(let i=0; i<4; i++) neurons.push(new Neuron(0, -150 + i*100, 'excitatory'));
             for(let i=0; i<2; i++) neurons.push(new Neuron(300, -50 + i*100, 'io'));
-
             closePanel();
         }
 
@@ -608,42 +656,34 @@
                 const isSelected = selectedNodes.includes(n) || selectedElement?.data === n;
                 const r = (26 + n.spikeAnim * 12) * camera.zoom;
                 
-                // 1. 신규 뉴런 강조 (점선 + 후광)
                 if (n.isNew) {
                     ctx.save();
                     ctx.beginPath(); ctx.arc(pos.x, pos.y, r + 12, 0, Math.PI * 2);
-                    ctx.strokeStyle = '#f59e0b'; // Amber-500
+                    ctx.strokeStyle = '#f59e0b';
                     ctx.lineWidth = 3 * camera.zoom;
-                    ctx.setLineDash([8, 4]); // 점선 효과
-                    ctx.lineDashOffset = -currentTime * 0.5; // 애니메이션
+                    ctx.setLineDash([8, 4]);
+                    ctx.lineDashOffset = -currentTime * 0.5;
                     ctx.stroke();
-                    
-                    // 은은한 글로우
                     ctx.beginPath(); ctx.arc(pos.x, pos.y, r + 15, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(245, 158, 11, 0.1)';
-                    ctx.fill();
+                    ctx.fillStyle = 'rgba(245, 158, 11, 0.1)'; ctx.fill();
                     ctx.restore();
                 }
 
-                // 2. 선택된 노드 글로우 효과
                 if (isSelected) {
                     ctx.beginPath(); ctx.arc(pos.x, pos.y, r + 8, 0, Math.PI * 2);
                     ctx.fillStyle = 'rgba(59, 130, 246, 0.2)'; ctx.fill();
                 }
 
-                // 3. 본체 그리기
                 ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
                 ctx.fillStyle = n.type === 'inhibitory' ? '#ef4444' : (n.type === 'io' ? '#94a3b8' : '#3b82f6'); ctx.fill();
                 ctx.strokeStyle = isSelected ? '#3b82f6' : (n === hoveredNode ? '#1e293b' : '#fff');
                 ctx.lineWidth = (isSelected ? 6 : 2.5) * camera.zoom; ctx.stroke();
                 
-                // 4. 전위 게이지
                 if (n.v > 0.02 && n.refractory === 0) {
                     ctx.beginPath(); ctx.arc(pos.x, pos.y, r + 5, -Math.PI/2, (-Math.PI/2) + (Math.PI * 2 * Math.min(1, n.v / n.threshold)));
                     ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3 * camera.zoom; ctx.stroke();
                 }
 
-                // 5. ID 텍스트
                 ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(8, 11 * camera.zoom)}px Inter`;
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(n.id, pos.x, pos.y);
             });
