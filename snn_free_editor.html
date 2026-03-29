@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SNN 자유 에디터 Pro + Grouping</title>
+    <title>SNN 에디터 by 현석쌤 </title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; overflow: hidden; }
-        canvas { cursor: crosshair; }
+        
+        /* 캔버스 초기화 시 깜빡임 효과를 위한 트랜지션 추가 */
+        canvas { cursor: crosshair; transition: opacity 0.2s ease; }
+        
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
         
         /* 공통 패널 스타일 */
@@ -53,36 +56,50 @@
 <body class="h-screen w-screen flex flex-col select-none">
 
     <!-- Header -->
-    <header class="h-14 flex justify-between items-center px-6 bg-white border-b border-slate-200 z-10">
+    <header class="h-14 flex justify-between items-center px-4 bg-white border-b border-slate-200 z-10">
         <div class="flex items-center gap-4">
             <h1 class="font-bold text-slate-800 text-lg">SNN Pro <span class="text-blue-500">Analyzer</span></h1>
+            
+            <!-- 비우기 버튼 (강력한 작동을 위해 id 부여) -->
+            <button id="btnEmptyCanvas" class="ml-2 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-md text-xs font-bold hover:bg-red-100 transition shadow-sm flex items-center gap-1">
+                🗑 캔버스 비우기
+            </button>
+
             <div id="recordingIndicator" class="hidden items-center px-3 py-1 bg-red-50 text-red-600 rounded-full text-[10px] font-black border border-red-100">
                 <span class="rec-dot animate-pulse-fast"></span> RECORDING DATA...
             </div>
         </div>
 
-        <div class="hidden lg:flex items-center text-xs text-slate-500 font-medium bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200">
-            💡 <span class="ml-1"><b>Shift+클릭</b>: 다중 선택 | <b>Alt+클릭</b>: 수정 | <b>드래그</b>: 이동 및 연결</span>
+        <div class="hidden xl:flex items-center text-xs text-slate-500 font-medium bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200">
+            💡 <span class="ml-1"><b>Shift+클릭</b>: 다중 선택 | <b>Alt+클릭</b>: 수정 | <b>드래그</b>: 연결</span>
         </div>
         
-        <div class="flex gap-2 items-center">
-            <div class="flex bg-slate-100 p-1 rounded-lg gap-1 mr-2">
+        <div class="flex gap-1.5 items-center">
+            <div class="flex bg-slate-100 p-1 rounded-lg gap-1 mr-1">
                 <button id="recordBtn" onclick="toggleRecording()" class="px-3 py-1 bg-white text-slate-700 border border-slate-200 rounded text-xs font-bold hover:bg-slate-50 transition shadow-sm">측정 시작</button>
                 <div id="statusMsg" class="hidden px-3 py-1 text-[10px] font-bold text-emerald-600 animate-pulse">자동 저장됨</div>
             </div>
 
-            <button onclick="toggleGlobalPanel()" class="px-3 py-1 bg-purple-50 text-purple-600 border border-purple-200 rounded text-xs font-bold hover:bg-purple-100 transition shadow-[0_0_10px_rgba(168,85,247,0.2)]">⚙️ 광역 설정</button>
-            <div class="h-4 w-[1px] bg-slate-200 mx-1"></div>
+            <button onclick="toggleGlobalPanel()" class="px-2 py-1 bg-purple-50 text-purple-600 border border-purple-200 rounded text-xs font-bold hover:bg-purple-100 transition shadow-[0_0_10px_rgba(168,85,247,0.2)]">⚙️ 광역 설정</button>
+            <div class="h-4 w-[1px] bg-slate-200 mx-0.5"></div>
 
-            <button onclick="toggleRaster()" class="px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded text-xs font-bold hover:bg-amber-100 transition">분석 도구 (Raster)</button>
-            <div class="h-4 w-[1px] bg-slate-200 mx-1"></div>
+            <button onclick="toggleRaster()" class="px-2 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded text-xs font-bold hover:bg-amber-100 transition">분석 (Raster)</button>
+            <div class="h-4 w-[1px] bg-slate-200 mx-0.5"></div>
+            
+            <!-- 뉴런 추가 버튼 (분리됨) -->
             <button onclick="addNeuron()" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-xs font-bold hover:bg-blue-100 transition shadow-[0_0_10px_rgba(59,130,246,0.2)]">+ 뉴런 추가</button>
             
-            <button onclick="exportData()" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-semibold hover:bg-slate-50 transition">구조 저장</button>
-            <button onclick="triggerFileInput()" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs font-semibold hover:bg-slate-50 transition text-emerald-600">구조 불러오기</button>
+            <div class="h-4 w-[1px] bg-slate-200 mx-0.5"></div>
+
+            <button onclick="exportData()" class="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-semibold hover:bg-slate-50 transition">저장</button>
+            <button onclick="triggerFileInput()" class="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-semibold hover:bg-slate-50 transition text-emerald-600">불러오기</button>
             <input type="file" id="importFile" class="hidden" accept=".txt,.json" onchange="handleFileImport(event)">
 
-            <button id="simToggle" class="px-4 py-1 bg-slate-800 text-white rounded text-xs font-bold hover:bg-slate-900 transition">시뮬레이션 중지</button>
+            <!-- 플레이 / 일시정지 아이콘 버튼 -->
+            <button id="simToggle" class="ml-1 w-8 h-8 flex items-center justify-center bg-slate-800 text-white rounded-full hover:bg-slate-900 transition shadow-md" title="시뮬레이션 재생/일시정지">
+                <svg id="pauseIcon" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>
+                <svg id="playIcon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
         </div>
     </header>
 
@@ -122,15 +139,13 @@
                     </div>
                     <input type="range" id="prop_globalProb" min="0" max="100" step="1" value="100" class="w-full">
                 </div>
-                <!-- 자발적 발화확률 (직접 입력 전용, 초당 확률) -->
                 <div>
                     <div class="flex justify-between items-center mb-1">
                         <label class="text-[10px] font-bold text-slate-500">초당 자발적 발화 확률 (Hz)</label>
                         <input type="number" id="input_spontaneousProb" min="0" step="0.000001" value="0.000000" class="w-24 text-[10px] font-mono text-right border rounded px-1 outline-none text-slate-600 py-0.5 bg-slate-50">
                     </div>
-                    <p class="text-[8px] text-slate-400 mt-1">※ 1초 기준 발화 기대 횟수 (소수점 정밀 입력 가능)</p>
+                    <p class="text-[8px] text-slate-400 mt-1">※ 1초 기준 발화 기대 횟수</p>
                 </div>
-                <!-- 불응기 시간 설정 -->
                 <div class="pt-2 border-t border-slate-100">
                     <div class="flex justify-between items-center mb-1">
                         <label class="text-[10px] font-bold text-slate-500">불응기 시간 (Tick)</label>
@@ -154,6 +169,7 @@
                     <select id="prop_type" class="w-full text-xs p-1.5 border rounded bg-white outline-none">
                         <option value="excitatory">흥분성 (E)</option>
                         <option value="inhibitory">억제성 (I)</option>
+                        <option value="io">입출력 (IO)</option>
                         <option value="input">입력 (In)</option>
                         <option value="output">출력 (Out)</option>
                     </select>
@@ -192,7 +208,7 @@
             </div>
         </div>
 
-        <div class="footer-info flex justify-between items-center">
+        <div class="footer-info flex justify-between items-center pointer-events-none">
             <div><span class="font-bold">© Kim HyunSeok (tragowl@onedu.jje.go.kr)</span> | 교육적 이용 허용 / 상업적 이용 금지</div>
         </div>
     </main>
@@ -209,6 +225,8 @@
         let width, height;
         let isSimulating = true;
         let camera = { x: 0, y: 0, zoom: 1 };
+        
+        // 메모리 관리를 위해 let으로 선언
         let neurons = [];
         let spikes = [];
         let spikeHistory = []; 
@@ -221,8 +239,7 @@
         let currentTime = 0;
         let isRasterVisible = false;
         
-        // 입력, 출력 분리로 카운터 변경
-        let typeCounters = { E: 1, I: 1, IN: 1, OUT: 1 };
+        let typeCounters = { E: 1, I: 1, IN: 1, OUT: 1, IO: 1 };
 
         let selectedNodes = []; 
         let selectedElement = null; 
@@ -230,30 +247,43 @@
         // 광역 설정 상태 변수
         let globalSpeed = 4.0;
         let globalFireProb = 1.0;
-        let globalSpontaneousProb = 0.0; // 1초당 기대 발화 확률
-        let globalRefractoryTicks = 25; // 불응기
+        let globalSpontaneousProb = 0.0;
+        let globalRefractoryTicks = 25;
+
+        const DEFAULT_NETWORK = {
+            "typeCounters": { "E": 20, "I": 8, "IN": 5, "OUT": 5 },
+            "neurons": [
+                {"id":"IN1","x":-500,"y":-150,"type":"input","threshold":1,"leak":0.05,"connections":[{"targetId":"E1","weight":1.2},{"targetId":"E2","weight":0.8}]},
+                {"id":"IN2","x":-500,"y":-50,"type":"input","threshold":1,"leak":0.05,"connections":[{"targetId":"E2","weight":1.0},{"targetId":"E3","weight":0.8}]},
+                {"id":"IN3","x":-500,"y":50,"type":"input","threshold":1,"leak":0.05,"connections":[{"targetId":"E3","weight":1.0},{"targetId":"E4","weight":0.8}]},
+                {"id":"IN4","x":-500,"y":150,"type":"input","threshold":1,"leak":0.05,"connections":[{"targetId":"E4","weight":1.2},{"targetId":"E5","weight":0.8}]},
+                {"id":"E1","x":-300,"y":-200,"type":"excitatory","threshold":1.2,"leak":0.05,"connections":[{"targetId":"E6","weight":1.0},{"targetId":"I1","weight":1.5}]},
+                {"id":"E2","x":-300,"y":-100,"type":"excitatory","threshold":1.0,"leak":0.05,"connections":[{"targetId":"E6","weight":0.8},{"targetId":"E7","weight":1.0}]},
+                {"id":"E3","x":-300,"y":0,"type":"excitatory","threshold":1.0,"leak":0.05,"connections":[{"targetId":"E7","weight":1.0},{"targetId":"E8","weight":0.8}]},
+                {"id":"E4","x":-300,"y":100,"type":"excitatory","threshold":1.0,"leak":0.05,"connections":[{"targetId":"E8","weight":1.0},{"targetId":"E9","weight":0.8}]},
+                {"id":"E5","x":-300,"y":200,"type":"excitatory","threshold":1.2,"leak":0.05,"connections":[{"targetId":"E9","weight":1.0},{"targetId":"I2","weight":1.5}]},
+                {"id":"I1","x":-150,"y":-150,"type":"inhibitory","threshold":0.8,"leak":0.1,"connections":[{"targetId":"E2","weight":1.2},{"targetId":"E6","weight":1.5}]},
+                {"id":"I2","x":-150,"y":150,"type":"inhibitory","threshold":0.8,"leak":0.1,"connections":[{"targetId":"E4","weight":1.2},{"targetId":"E9","weight":1.5}]},
+                {"id":"E6","x":0,"y":-150,"type":"excitatory","threshold":1.5,"leak":0.05,"connections":[{"targetId":"E10","weight":1.2},{"targetId":"I3","weight":1.0}]},
+                {"id":"E7","x":0,"y":-50,"type":"excitatory","threshold":1.2,"leak":0.05,"connections":[{"targetId":"E10","weight":0.8},{"targetId":"E11","weight":1.2}]},
+                {"id":"E8","x":0,"y":50,"type":"excitatory","threshold":1.2,"leak":0.05,"connections":[{"targetId":"E11","weight":1.2},{"targetId":"E12","weight":0.8}]},
+                {"id":"E9","x":0,"y":150,"type":"excitatory","threshold":1.5,"leak":0.05,"connections":[{"targetId":"E12","weight":1.2},{"targetId":"I4","weight":1.0}]},
+                {"id":"I3","x":150,"y":-100,"type":"inhibitory","threshold":0.8,"leak":0.1,"connections":[{"targetId":"E10","weight":1.2},{"targetId":"OUT1","weight":0.5}]},
+                {"id":"I4","x":150,"y":100,"type":"inhibitory","threshold":0.8,"leak":0.1,"connections":[{"targetId":"E12","weight":1.2},{"targetId":"OUT3","weight":0.5}]},
+                {"id":"E10","x":300,"y":-100,"type":"excitatory","threshold":1.0,"leak":0.05,"connections":[{"targetId":"OUT1","weight":1.5},{"targetId":"OUT2","weight":0.8}]},
+                {"id":"E11","x":300,"y":0,"type":"excitatory","threshold":1.0,"leak":0.05,"connections":[{"targetId":"OUT2","weight":1.5}]},
+                {"id":"E12","x":300,"y":100,"type":"excitatory","threshold":1.0,"leak":0.05,"connections":[{"targetId":"OUT2","weight":0.8},{"targetId":"OUT3","weight":1.5}]},
+                {"id":"OUT1","x":500,"y":-100,"type":"output","threshold":1.0,"leak":0.05,"connections":[]},
+                {"id":"OUT2","x":500,"y":0,"type":"output","threshold":1.0,"leak":0.05,"connections":[]},
+                {"id":"OUT3","x":500,"y":100,"type":"output","threshold":1.0,"leak":0.05,"connections":[]}
+            ]
+        };
 
         // --- Window Dragging Logic ---
         function makeMovable(panel, header) {
-            let isDragging = false;
-            let offset = { x: 0, y: 0 };
-
-            header.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                offset.x = e.clientX - panel.offsetLeft;
-                offset.y = e.clientY - panel.offsetTop;
-                e.preventDefault();
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (isDragging) {
-                    panel.style.left = (e.clientX - offset.x) + 'px';
-                    panel.style.top = (e.clientY - offset.y) + 'px';
-                    panel.style.right = 'auto'; 
-                    panel.style.bottom = 'auto'; 
-                }
-            });
-
+            let isDragging = false, offset = { x: 0, y: 0 };
+            header.addEventListener('mousedown', (e) => { isDragging = true; offset.x = e.clientX - panel.offsetLeft; offset.y = e.clientY - panel.offsetTop; e.preventDefault(); });
+            document.addEventListener('mousemove', (e) => { if (isDragging) { panel.style.left = (e.clientX - offset.x) + 'px'; panel.style.top = (e.clientY - offset.y) + 'px'; panel.style.right = 'auto'; panel.style.bottom = 'auto'; } });
             document.addEventListener('mouseup', () => isDragging = false);
         }
 
@@ -263,44 +293,17 @@
 
         function toggleGlobalPanel() {
             globalPanel.style.display = globalPanel.style.display === 'block' ? 'none' : 'block';
-            if (globalPanel.style.display === 'block') {
-                globalPanel.style.left = '40%';
-                globalPanel.style.top = '100px';
-            }
+            if (globalPanel.style.display === 'block') { globalPanel.style.left = '40%'; globalPanel.style.top = '100px'; }
         }
 
         // --- 전역 설정 패널 이벤트 연결 ---
-        document.getElementById('prop_globalSpeed').oninput = (e) => {
-            globalSpeed = parseFloat(e.target.value);
-            document.getElementById('val_globalSpeed').innerText = globalSpeed.toFixed(1);
-        };
-
+        document.getElementById('prop_globalSpeed').oninput = (e) => { globalSpeed = parseFloat(e.target.value); document.getElementById('val_globalSpeed').innerText = globalSpeed.toFixed(1); };
         const rangeGlobalProb = document.getElementById('prop_globalProb');
         const inputGlobalProb = document.getElementById('input_globalProb');
-        
-        rangeGlobalProb.oninput = (e) => {
-            inputGlobalProb.value = e.target.value;
-            globalFireProb = parseFloat(e.target.value) / 100;
-        };
-        inputGlobalProb.oninput = (e) => {
-            let val = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0));
-            rangeGlobalProb.value = val;
-            globalFireProb = val / 100;
-        };
-
-        // 미수신 확률 정밀도 반영 (직접입력)
-        const inputSpontaneousProb = document.getElementById('input_spontaneousProb');
-        inputSpontaneousProb.oninput = (e) => {
-            let val = Math.max(0, parseFloat(e.target.value) || 0);
-            globalSpontaneousProb = val; // 1초당 확률
-        };
-
-        // 불응기 시간 적용
-        const inputGlobalRefractory = document.getElementById('input_globalRefractory');
-        inputGlobalRefractory.oninput = (e) => {
-            let val = Math.max(0, parseInt(e.target.value) || 0);
-            globalRefractoryTicks = val;
-        };
+        rangeGlobalProb.oninput = (e) => { inputGlobalProb.value = e.target.value; globalFireProb = parseFloat(e.target.value) / 100; };
+        inputGlobalProb.oninput = (e) => { let val = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)); rangeGlobalProb.value = val; globalFireProb = val / 100; };
+        document.getElementById('input_spontaneousProb').oninput = (e) => { globalSpontaneousProb = Math.max(0, parseFloat(e.target.value) || 0); };
+        document.getElementById('input_globalRefractory').oninput = (e) => { globalRefractoryTicks = Math.max(0, parseInt(e.target.value) || 0); };
 
         const resizeObserver = new ResizeObserver(entries => {
             for (let entry of entries) {
@@ -315,97 +318,46 @@
 
         class Neuron {
             constructor(x, y, type = 'excitatory', id = null) {
-                this.x = x;
-                this.y = y;
-                this.type = type;
-                this.id = id || this.generateCleanId(type);
-                this.v = 0;
-                this.threshold = 1.0;
-                this.leak = 0.05;
-                this.refractory = 0;
-                this.spikeAnim = 0;
-                this.connections = [];
-                this.isNew = false;
+                this.x = x; this.y = y; this.type = type; this.id = id || this.generateCleanId(type);
+                this.v = 0; this.threshold = 1.0; this.leak = 0.05; this.refractory = 0; this.spikeAnim = 0;
+                this.connections = []; this.isNew = false;
             }
-
             generateCleanId(type) {
-                let prefix = 'E';
-                if (type === 'inhibitory') prefix = 'I';
-                else if (type === 'input') prefix = 'IN';
-                else if (type === 'output') prefix = 'OUT';
-                else if (type === 'io') prefix = 'IO'; // 하위 호환성
-
-                // 만약 구버전 파일에서 넘어온 타입이 있어 카운터가 없다면 초기화
+                let prefix = type === 'inhibitory' ? 'I' : type === 'input' ? 'IN' : type === 'output' ? 'OUT' : type === 'io' ? 'IO' : 'E';
                 if (typeCounters[prefix] === undefined) typeCounters[prefix] = 1;
-
-                const id = `${prefix}${typeCounters[prefix]}`;
-                typeCounters[prefix]++;
-                return id;
+                return `${prefix}${typeCounters[prefix]++}`;
             }
-
             update() {
-                if (this.refractory > 0) {
-                    this.refractory--;
-                    this.v *= 0.8;
-                } else {
+                if (this.refractory > 0) { this.refractory--; this.v *= 0.8; } 
+                else {
                     this.v *= (1 - this.leak);
                     if (this.v >= this.threshold) {
-                        if (Math.random() <= globalFireProb) {
-                            this.fire();
-                        } else {
-                            this.v = 0; 
-                        }
-                    } else {
-                        // 자발적 발화 확률 (1초(약 60프레임) 단위 기준으로 나누어서 계산)
-                        if (globalSpontaneousProb > 0 && Math.random() <= (globalSpontaneousProb / 60)) {
-                            this.fire();
-                        }
+                        if (Math.random() <= globalFireProb) this.fire(); else this.v = 0; 
+                    } else if (globalSpontaneousProb > 0 && Math.random() <= (globalSpontaneousProb / 60)) {
+                        this.fire();
                     }
                 }
                 if (this.spikeAnim > 0) this.spikeAnim *= 0.85;
             }
-
             fire() {
-                this.v = 1.2;
-                this.spikeAnim = 1.0;
-                this.refractory = globalRefractoryTicks; // 광역 설정 불응기 반영
-                
-                const spikeEvent = { 
-                    neuronId: this.id, 
-                    time: currentTime, 
-                    type: this.type,
-                    realTime: performance.now() 
-                };
-                
+                this.v = 1.2; this.spikeAnim = 1.0; this.refractory = globalRefractoryTicks; 
+                const spikeEvent = { neuronId: this.id, time: currentTime, type: this.type, realTime: performance.now() };
                 spikeHistory.push(spikeEvent);
                 if (spikeHistory.length > 5000) spikeHistory.shift();
                 if (isRecording) recordedSpikes.push(spikeEvent);
-
                 this.connections.forEach(conn => {
                     const target = neurons.find(n => n.id === conn.targetId);
-                    if (target) {
-                        const dist = Math.sqrt(Math.pow(this.x - target.x, 2) + Math.pow(this.y - target.y, 2));
-                        spikes.push(new Spike(this, target, conn.weight, dist));
-                    }
+                    if (target) spikes.push(new Spike(this, target, conn.weight, Math.sqrt(Math.pow(this.x - target.x, 2) + Math.pow(this.y - target.y, 2))));
                 });
             }
         }
 
         class Spike {
-            constructor(source, target, weight, dist) {
-                this.source = source;
-                this.target = target;
-                this.weight = weight;
-                this.type = source.type;
-                this.dist = dist;
-                this.progress = 0;
-                this.speed = globalSpeed; 
-            }
+            constructor(source, target, weight, dist) { this.source = source; this.target = target; this.weight = weight; this.type = source.type; this.dist = dist; this.progress = 0; this.speed = globalSpeed; }
             update() {
                 this.progress += this.speed;
                 if (this.progress >= this.dist) {
-                    const effect = this.type === 'inhibitory' ? -this.weight * 1.5 : this.weight;
-                    this.target.v += effect;
+                    this.target.v += this.type === 'inhibitory' ? -this.weight * 1.5 : this.weight;
                     return false;
                 }
                 return true;
@@ -420,161 +372,130 @@
         function applyGroup() {
             const groupName = document.getElementById('group_name_input').value.trim();
             if (!groupName || selectedNodes.length === 0) return;
-            
-            let maxIndex = 0;
-            const prefix = groupName + '-';
-            
+            let maxIndex = 0; const prefix = groupName + '-';
             neurons.forEach(n => {
                 if (n.id.startsWith(prefix)) {
-                    const numStr = n.id.substring(prefix.length);
-                    const num = parseInt(numStr, 10);
-                    if (!isNaN(num) && num > maxIndex) {
-                        maxIndex = num;
-                    }
+                    const num = parseInt(n.id.substring(prefix.length), 10);
+                    if (!isNaN(num) && num > maxIndex) maxIndex = num;
                 }
             });
-
             const idMap = {};
             selectedNodes.forEach((node, index) => {
-                const oldId = node.id;
                 const newId = `${groupName}-${maxIndex + index + 1}`;
-                idMap[oldId] = newId;
-                node.id = newId;
-                node.isNew = false;
+                idMap[node.id] = newId; node.id = newId; node.isNew = false;
             });
-            
-            neurons.forEach(n => {
-                n.connections.forEach(conn => {
-                    if (idMap[conn.targetId]) conn.targetId = idMap[conn.targetId];
-                });
-            });
-            
-            document.getElementById('group_name_input').value = "";
-            showPanel(); 
+            neurons.forEach(n => n.connections.forEach(conn => { if (idMap[conn.targetId]) conn.targetId = idMap[conn.targetId]; }));
+            document.getElementById('group_name_input').value = ""; showPanel(); 
         }
 
         function exportData() {
             const data = { typeCounters, neurons: neurons.map(n => ({ id: n.id, x: n.x, y: n.y, type: n.type, threshold: n.threshold, leak: n.leak, connections: n.connections })) };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'text/plain' });
-            const a = document.createElement('a'); 
-            a.href = URL.createObjectURL(blob); 
-            a.download = `snn_archi_${getFormattedDate()}.txt`; 
-            a.click();
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `snn_archi_${getFormattedDate()}.txt`; a.click();
         }
 
         function triggerFileInput() { document.getElementById('importFile').click(); }
 
         function handleFileImport(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    importData(data);
-                } catch (err) { console.error("파일 파싱 에러:", err); }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
+            reader.onload = (e) => { try { importData(JSON.parse(e.target.result)); } catch (err) { console.error("파일 파싱 에러:", err); } };
+            reader.readAsText(file); event.target.value = '';
         }
 
         function importData(data) {
-            neurons = []; spikes = []; spikeHistory = []; currentTime = 0;
-            typeCounters = data.typeCounters || { E: 1, I: 1, IN: 1, OUT: 1 };
+            neurons.splice(0, neurons.length); spikes.splice(0, spikes.length); spikeHistory.splice(0, spikeHistory.length); currentTime = 0;
+            typeCounters = data.typeCounters || { E: 1, I: 1, IN: 1, OUT: 1, IO: 1 };
             data.neurons.forEach(nD => {
                 const n = new Neuron(nD.x, nD.y, nD.type, nD.id);
-                n.threshold = nD.threshold || 1.0;
-                n.leak = nD.leak || 0.05;
-                n.connections = nD.connections || [];
+                n.threshold = nD.threshold || 1.0; n.leak = nD.leak || 0.05; n.connections = nD.connections || [];
                 neurons.push(n);
             });
             closePanel();
         }
 
-        function toggleRecording() {
-            const btn = document.getElementById('recordBtn');
-            const indicator = document.getElementById('recordingIndicator');
-            const statusMsg = document.getElementById('statusMsg');
-            
-            if (!isRecording) {
-                isRecording = true; 
-                recordedSpikes = []; 
-                recordingStartTime = currentTime;
-                realRecordingStartTime = performance.now();
+        // ==========================================
+        // [완벽 보완] 가장 강력한 비우기 이벤트 로직
+        // ==========================================
+        document.getElementById('btnEmptyCanvas').addEventListener('click', () => {
+            if(confirm("진행중인 캔버스의 모든 뉴런과 연결을 완전히 삭제하시겠습니까? (복구 불가)")) {
                 
+                // 1. 배열 완전 삭제 (메모리 구조 불문하고 강제로 전부 날림)
+                neurons.splice(0, neurons.length);
+                spikes.splice(0, spikes.length);
+                spikeHistory.splice(0, spikeHistory.length);
+                selectedNodes.splice(0, selectedNodes.length);
+                recordedSpikes.splice(0, recordedSpikes.length);
+                
+                // 2. 상태 변수 초기화
+                typeCounters = { E: 1, I: 1, IN: 1, OUT: 1, IO: 1 };
+                currentTime = 0;
+                selectedElement = null;
+                hoveredNode = null;
+                draggingNode = null;
+                connectingFrom = null;
+                
+                // 3. 캔버스 즉각 강제 삭제
+                ctx.clearRect(0, 0, width, height);
+                if (isRasterVisible) {
+                    rasterCtx.clearRect(0, 0, rasterCanvas.width, rasterCanvas.height);
+                }
+
+                // 4. 열려있는 패널 닫기
+                closePanel();
+
+                // 5. 시각적 깜빡임 피드백 (확실히 초기화되었음을 알려줌)
+                canvas.style.opacity = '0';
+                setTimeout(() => canvas.style.opacity = '1', 150);
+            }
+        });
+
+        function toggleRecording() {
+            const btn = document.getElementById('recordBtn'), indicator = document.getElementById('recordingIndicator'), statusMsg = document.getElementById('statusMsg');
+            if (!isRecording) {
+                isRecording = true; recordedSpikes.length = 0; recordingStartTime = currentTime; realRecordingStartTime = performance.now();
                 btn.innerText = "측정 종료"; btn.classList.replace('bg-white', 'bg-red-500'); btn.classList.replace('text-slate-700', 'text-white');
-                indicator.classList.remove('hidden'); indicator.classList.add('flex');
-                statusMsg.classList.add('hidden');
+                indicator.classList.remove('hidden'); indicator.classList.add('flex'); statusMsg.classList.add('hidden');
             } else {
                 isRecording = false; 
                 btn.innerText = "측정 시작"; btn.classList.replace('bg-red-500', 'bg-white'); btn.classList.replace('text-white', 'text-slate-700');
                 indicator.classList.replace('flex', 'hidden');
-                
                 exportCSV();
-                
-                statusMsg.classList.remove('hidden');
-                setTimeout(() => statusMsg.classList.add('hidden'), 3000);
+                statusMsg.classList.remove('hidden'); setTimeout(() => statusMsg.classList.add('hidden'), 3000);
             }
         }
 
-        // CSV 추출 함수 수정: 광역 설정 값(메타데이터) 포함
         function exportCSV() {
             if (recordedSpikes.length === 0) return;
-            
-            const totalTicks = currentTime - recordingStartTime;
-            const totalRealTimeMs = performance.now() - realRecordingStartTime;
+            const totalTicks = currentTime - recordingStartTime, totalRealTimeMs = performance.now() - realRecordingStartTime;
             const avgTickMs = totalTicks > 0 ? (totalRealTimeMs / totalTicks).toFixed(4) : 0;
-
             let csvRows = [
-                "=== SIMULATION METADATA ===",
-                `Average_Time_Per_Tick_ms,${avgTickMs}`,
-                `Total_Ticks,${totalTicks}`,
-                `Total_Real_Time_ms,${totalRealTimeMs.toFixed(2)}`,
-                `Global_Signal_Speed,${globalSpeed}`,
-                `Global_Fire_Probability,${globalFireProb}`,
-                `Global_Spontaneous_Fire_Prob_Per_Sec,${globalSpontaneousProb}`,
-                `Global_Refractory_Ticks,${globalRefractoryTicks}`,
-                "",
-                "=== SPIKE TIME SERIES ===", 
-                "Time_Tick,Neuron_ID,Type,Real_Relative_Time_ms"
+                "=== SIMULATION METADATA ===", `Average_Time_Per_Tick_ms,${avgTickMs}`, `Total_Ticks,${totalTicks}`, `Total_Real_Time_ms,${totalRealTimeMs.toFixed(2)}`,
+                `Global_Signal_Speed,${globalSpeed}`, `Global_Fire_Probability,${globalFireProb}`, `Global_Spontaneous_Fire_Prob_Per_Sec,${globalSpontaneousProb}`, `Global_Refractory_Ticks,${globalRefractoryTicks}`, "",
+                "=== SPIKE TIME SERIES ===", "Time_Tick,Neuron_ID,Type,Real_Relative_Time_ms"
             ];
-            
-            recordedSpikes.forEach(s => {
-                const relativeRealMs = s.realTime ? (s.realTime - realRecordingStartTime).toFixed(2) : ((s.time - recordingStartTime) * avgTickMs).toFixed(2);
-                csvRows.push(`${s.time},${s.neuronId},${s.type},${relativeRealMs}`);
-            });
-            
+            recordedSpikes.forEach(s => csvRows.push(`${s.time},${s.neuronId},${s.type},${s.realTime ? (s.realTime - realRecordingStartTime).toFixed(2) : ((s.time - recordingStartTime) * avgTickMs).toFixed(2)}`));
             csvRows.push("\n=== NETWORK STRUCTURE ===", "Neuron_ID,Type,Threshold,Leak");
             neurons.forEach(n => csvRows.push(`${n.id},${n.type},${n.threshold},${n.leak}`));
-            
             csvRows.push("\n=== SYNAPSE WEIGHTS ===", "Source_ID,Target_ID,Weight,Distance");
             neurons.forEach(n => n.connections.forEach(c => {
                 const targetNode = neurons.find(tn => tn.id === c.targetId);
                 const dist = targetNode ? Math.sqrt(Math.pow(n.x - targetNode.x, 2) + Math.pow(n.y - targetNode.y, 2)).toFixed(2) : 0;
                 csvRows.push(`${n.id},${c.targetId},${c.weight},${dist}`);
             }));
-            
             const blob = new Blob(["\uFEFF" + csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob); 
-            link.download = `snn_data_${getFormattedDate()}.csv`;
-            link.click();
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `snn_data_${getFormattedDate()}.csv`; link.click();
         }
 
         function worldToScreen(x, y) { return { x: (x - camera.x) * camera.zoom + width / 2, y: (y - camera.y) * camera.zoom + height / 2 }; }
         function screenToWorld(x, y) { return { x: (x - width / 2) / camera.zoom + camera.x, y: (y - height / 2) / camera.zoom + camera.y }; }
         function distToSegment(p, v, w) {
-            const l2 = Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2);
-            if (l2 === 0) return Math.sqrt(Math.pow(p.x - v.x, 2) + Math.pow(p.y - v.y, 2));
+            const l2 = Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2); if (l2 === 0) return Math.sqrt(Math.pow(p.x - v.x, 2) + Math.pow(p.y - v.y, 2));
             let t = Math.max(0, Math.min(1, ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2));
             return Math.sqrt(Math.pow(p.x - (v.x + t * (w.x - v.x)), 2) + Math.pow(p.y - (v.y + t * (w.y - v.y)), 2));
         }
 
-        let hoveredNode = null;
-        let draggingNode = null;
-        let panning = false;
-        let connectingFrom = null;
-        let lastMouse = { x: 0, y: 0 };
+        let hoveredNode = null, draggingNode = null, panning = false, connectingFrom = null, lastMouse = { x: 0, y: 0 };
 
         canvas.addEventListener('mousedown', e => {
             const worldPos = screenToWorld(e.clientX, e.clientY - 56);
@@ -596,10 +517,10 @@
                     let foundSynapse = null;
                     neurons.forEach(n => n.connections.forEach(conn => {
                         const target = neurons.find(tn => tn.id === conn.targetId);
-                        if (target) { const d = distToSegment(worldPos, n, target); if (d < 10) foundSynapse = { type: 'synapse', source: n, connection: conn }; }
+                        if (target && distToSegment(worldPos, n, target) < 10) foundSynapse = { type: 'synapse', source: n, connection: conn };
                     }));
                     if (e.altKey && foundSynapse) { selectedNodes = []; selectedElement = foundSynapse; showPanel(e.clientX, e.clientY); }
-                    else if (!e.altKey) { selectedElement = null; selectedNodes = []; closePanel(); panning = true; }
+                    else if (!e.altKey) { selectedElement = null; selectedNodes.splice(0, selectedNodes.length); closePanel(); panning = true; }
                 }
             } else panning = true;
             lastMouse = { x: e.clientX, y: e.clientY };
@@ -631,32 +552,26 @@
             rasterPanel.style.display = isRasterVisible ? 'block' : 'none';
             if (isRasterVisible) {
                 const container = document.getElementById('rasterContainer');
-                rasterCanvas.width = container.clientWidth;
-                rasterCanvas.height = container.clientHeight;
+                rasterCanvas.width = container.clientWidth; rasterCanvas.height = container.clientHeight;
             }
         }
 
         function updateRaster() {
-            if (!isRasterVisible || neurons.length === 0) return;
+            if (!isRasterVisible) return;
+            if (neurons.length === 0) { rasterCtx.clearRect(0, 0, rasterCanvas.width, rasterCanvas.height); return; }
+            
             rasterCtx.clearRect(0, 0, rasterCanvas.width, rasterCanvas.height);
-            const rowHeight = (rasterCanvas.height - 10) / neurons.length;
-            const timeWindow = 300;
+            const rowHeight = (rasterCanvas.height - 10) / neurons.length, timeWindow = 300;
             neurons.forEach((n, i) => {
                 const y = 5 + i * rowHeight + rowHeight/2;
-                rasterCtx.strokeStyle = 'rgba(0,0,0,0.03)';
-                rasterCtx.strokeRect(0, y, rasterCanvas.width, 1);
-                rasterCtx.fillStyle = '#94a3b8'; rasterCtx.font = '8px monospace';
-                rasterCtx.fillText(n.id, 2, y - 2);
+                rasterCtx.strokeStyle = 'rgba(0,0,0,0.03)'; rasterCtx.strokeRect(0, y, rasterCanvas.width, 1);
+                rasterCtx.fillStyle = '#94a3b8'; rasterCtx.font = '8px monospace'; rasterCtx.fillText(n.id, 2, y - 2);
             });
             spikeHistory.forEach(s => {
-                const timeDiff = currentTime - s.time;
-                if (timeDiff > timeWindow) return;
-                const x = rasterCanvas.width - (timeDiff / timeWindow) * rasterCanvas.width;
-                const idx = neurons.findIndex(n => n.id === s.neuronId);
+                const timeDiff = currentTime - s.time; if (timeDiff > timeWindow) return;
+                const x = rasterCanvas.width - (timeDiff / timeWindow) * rasterCanvas.width, idx = neurons.findIndex(n => n.id === s.neuronId);
                 if (idx !== -1) {
-                    rasterCtx.fillStyle = s.type === 'inhibitory' ? '#ef4444' : 
-                                          (s.type === 'input' ? '#10b981' : 
-                                          (s.type === 'output' ? '#8b5cf6' : '#3b82f6'));
+                    rasterCtx.fillStyle = s.type === 'inhibitory' ? '#ef4444' : (s.type === 'input' ? '#10b981' : (s.type === 'output' ? '#8b5cf6' : (s.type === 'io' ? '#94a3b8' : '#3b82f6')));
                     rasterCtx.fillRect(x, 5 + idx * rowHeight + 1, 2, rowHeight - 2);
                 }
             });
@@ -704,7 +619,7 @@
                 const idsToRemove = selectedNodes.map(n => n.id);
                 neurons = neurons.filter(n => !idsToRemove.includes(n.id));
                 neurons.forEach(n => n.connections = n.connections.filter(c => !idsToRemove.includes(c.targetId)));
-                selectedNodes = [];
+                selectedNodes.splice(0, selectedNodes.length);
             }
             selectedElement = null; closePanel();
         }
@@ -715,14 +630,7 @@
             newNode.isNew = true; neurons.push(newNode);
         }
 
-        function init() {
-            typeCounters = { E: 1, I: 1, IN: 1, OUT: 1 }; 
-            camera = { x: 0, y: 0, zoom: 0.8 }; neurons = []; spikes = []; spikeHistory = []; currentTime = 0;
-            for(let i=0; i<3; i++) neurons.push(new Neuron(-300, -100 + i*100, 'input'));
-            for(let i=0; i<4; i++) neurons.push(new Neuron(0, -150 + i*100, 'excitatory'));
-            for(let i=0; i<2; i++) neurons.push(new Neuron(300, -50 + i*100, 'output'));
-            closePanel();
-        }
+        function init() { importData(DEFAULT_NETWORK); camera = { x: 0, y: 0, zoom: 0.85 }; }
 
         function updateSim() { if (isSimulating) { currentTime++; neurons.forEach(n => n.update()); spikes = spikes.filter(s => s.update()); updateRaster(); } }
 
@@ -750,11 +658,7 @@
             spikes.forEach(s => {
                 const r = s.progress / s.dist, pos = worldToScreen(s.source.x + (s.target.x - s.source.x) * r, s.source.y + (s.target.y - s.source.y) * r);
                 ctx.beginPath(); ctx.arc(pos.x, pos.y, 5 * camera.zoom, 0, Math.PI * 2);
-                
-                // 스파이크 색상도 입력/출력/흥분성/억제성에 맞게 변경
-                ctx.fillStyle = s.type === 'inhibitory' ? '#ef4444' : 
-                              (s.type === 'input' ? '#10b981' : 
-                              (s.type === 'output' ? '#8b5cf6' : '#3b82f6')); 
+                ctx.fillStyle = s.type === 'inhibitory' ? '#ef4444' : (s.type === 'input' ? '#10b981' : (s.type === 'output' ? '#8b5cf6' : (s.type === 'io' ? '#94a3b8' : '#3b82f6'))); 
                 ctx.fill();
             });
             neurons.forEach(n => {
@@ -765,14 +669,8 @@
                 }
                 if (isSelected) { ctx.beginPath(); ctx.arc(pos.x, pos.y, r + 8, 0, Math.PI * 2); ctx.fillStyle = 'rgba(59, 130, 246, 0.2)'; ctx.fill(); }
                 ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
-                
-                // 뉴런 본체 색상: 억제성(빨강), 입력(초록), 출력(보라), 흥분성(파랑), 과거io(회색)
-                ctx.fillStyle = n.type === 'inhibitory' ? '#ef4444' : 
-                              (n.type === 'input' ? '#10b981' : 
-                              (n.type === 'output' ? '#8b5cf6' : 
-                              (n.type === 'io' ? '#94a3b8' : '#3b82f6'))); 
+                ctx.fillStyle = n.type === 'inhibitory' ? '#ef4444' : (n.type === 'input' ? '#10b981' : (n.type === 'output' ? '#8b5cf6' : (n.type === 'io' ? '#94a3b8' : '#3b82f6'))); 
                 ctx.fill();
-                
                 ctx.strokeStyle = isSelected ? '#3b82f6' : (n === hoveredNode ? '#1e293b' : '#fff');
                 ctx.lineWidth = (isSelected ? 6 : 2.5) * camera.zoom; ctx.stroke();
                 if (n.v > 0.02 && n.refractory === 0) {
@@ -784,13 +682,14 @@
             });
         }
 
-        window.onload = () => {
-            width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight - 56;
-            init(); (function loop() { updateSim(); draw(); requestAnimationFrame(loop); })();
-        };
-
+        window.onload = () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight - 56; init(); (function loop() { updateSim(); draw(); requestAnimationFrame(loop); })(); };
         window.onresize = () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight - 56; };
-        document.getElementById('simToggle').onclick = (e) => { isSimulating = !isSimulating; e.target.innerText = isSimulating ? '시뮬레이션 중지' : '시뮬레이션 가동'; };
+        
+        document.getElementById('simToggle').onclick = () => { 
+            isSimulating = !isSimulating;
+            document.getElementById('pauseIcon').classList.toggle('hidden', !isSimulating);
+            document.getElementById('playIcon').classList.toggle('hidden', isSimulating);
+        };
     </script>
 </body>
 </html>
