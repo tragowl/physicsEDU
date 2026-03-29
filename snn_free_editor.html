@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SNN 자유 에디터 Pro by 친절한 현석쌤</title>
+    <title>SNN 자유 에디터 Pro + Grouping</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
@@ -517,6 +517,7 @@
             }
         }
 
+        // CSV 추출 함수 수정: 광역 설정 값(메타데이터) 포함
         function exportCSV() {
             if (recordedSpikes.length === 0) return;
             
@@ -529,6 +530,10 @@
                 `Average_Time_Per_Tick_ms,${avgTickMs}`,
                 `Total_Ticks,${totalTicks}`,
                 `Total_Real_Time_ms,${totalRealTimeMs.toFixed(2)}`,
+                `Global_Signal_Speed,${globalSpeed}`,
+                `Global_Fire_Probability,${globalFireProb}`,
+                `Global_Spontaneous_Fire_Prob_Per_Sec,${globalSpontaneousProb}`,
+                `Global_Refractory_Ticks,${globalRefractoryTicks}`,
                 "",
                 "=== SPIKE TIME SERIES ===", 
                 "Time_Tick,Neuron_ID,Type,Real_Relative_Time_ms"
