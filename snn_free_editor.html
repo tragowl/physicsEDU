@@ -18,6 +18,9 @@
         /* 설정 패널 */
         #propPanel { width: 240px; }
         
+        /* 광역 설정 패널 */
+        #globalPanel { width: 270px; }
+        
         /* 분석 패널 (크기 조절 가능) */
         #rasterPanel { 
             width: 480px; 
@@ -35,6 +38,11 @@
         #rasterCanvas { background: #fff; border-radius: 4px; border: 1px solid #e2e8f0; width: 100%; height: 100%; display: block; }
         
         input[type=range] { accent-color: #3b82f6; cursor: pointer; }
+        
+        /* 숫자 직접 입력 인풋 화살표 숨기기 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { opacity: 1; }
+
         .footer-info { position: absolute; bottom: 0; left: 0; width: 100%; padding: 12px 24px; background: rgba(255,255,255,0.7); font-size: 11px; color: #64748b; border-top: 1px solid rgba(0,0,0,0.05); }
         
         .rec-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block; margin-right: 6px; }
@@ -63,6 +71,9 @@
                 <div id="statusMsg" class="hidden px-3 py-1 text-[10px] font-bold text-emerald-600 animate-pulse">자동 저장됨</div>
             </div>
 
+            <button onclick="toggleGlobalPanel()" class="px-3 py-1 bg-purple-50 text-purple-600 border border-purple-200 rounded text-xs font-bold hover:bg-purple-100 transition shadow-[0_0_10px_rgba(168,85,247,0.2)]">⚙️ 광역 설정</button>
+            <div class="h-4 w-[1px] bg-slate-200 mx-1"></div>
+
             <button onclick="toggleRaster()" class="px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded text-xs font-bold hover:bg-amber-100 transition">분석 도구 (Raster)</button>
             <div class="h-4 w-[1px] bg-slate-200 mx-1"></div>
             <button onclick="addNeuron()" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-xs font-bold hover:bg-blue-100 transition shadow-[0_0_10px_rgba(59,130,246,0.2)]">+ 뉴런 추가</button>
@@ -78,7 +89,7 @@
     <main class="flex-1 relative overflow-hidden bg-[#f1f5f9]">
         <canvas id="simCanvas"></canvas>
 
-        <!-- 분석 패널 (이동 및 크기 조절 가능) -->
+        <!-- 분석 패널 -->
         <div id="rasterPanel" class="movable-panel glass rounded-xl">
             <div class="panel-header" id="rasterHeader">
                 <span class="text-[10px] font-black uppercase text-amber-600">Raster Plot (Real-time)</span>
@@ -90,6 +101,43 @@
             <div class="flex justify-between mt-1 text-[8px] text-slate-400 font-mono">
                 <span>-300 Frames</span>
                 <span>Now</span>
+            </div>
+        </div>
+
+        <!-- 광역 설정 패널 -->
+        <div id="globalPanel" class="movable-panel glass p-4 rounded-xl" onmousedown="event.stopPropagation()">
+            <div id="globalHeader" class="panel-header">
+                <span class="text-[10px] font-black uppercase text-purple-600">Global Settings</span>
+                <button onclick="document.getElementById('globalPanel').style.display='none'" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between"><label class="text-[10px] font-bold text-slate-500 mb-1">신호 전달 속도</label><span id="val_globalSpeed" class="text-[10px] font-mono text-slate-400">4.0</span></div>
+                    <input type="range" id="prop_globalSpeed" min="1" max="20" step="0.5" value="4" class="w-full">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-[10px] font-bold text-slate-500">역치도달시 발화확률 (%)</label>
+                        <input type="number" id="input_globalProb" min="0" max="100" step="1" value="100" class="w-16 text-[10px] font-mono text-right border rounded px-1 outline-none text-slate-600 py-0.5 bg-slate-50">
+                    </div>
+                    <input type="range" id="prop_globalProb" min="0" max="100" step="1" value="100" class="w-full">
+                </div>
+                <!-- 자발적 발화확률 (직접 입력 전용, 초당 확률) -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-[10px] font-bold text-slate-500">초당 자발적 발화 확률 (Hz)</label>
+                        <input type="number" id="input_spontaneousProb" min="0" step="0.000001" value="0.000000" class="w-24 text-[10px] font-mono text-right border rounded px-1 outline-none text-slate-600 py-0.5 bg-slate-50">
+                    </div>
+                    <p class="text-[8px] text-slate-400 mt-1">※ 1초 기준 발화 기대 횟수 (소수점 정밀 입력 가능)</p>
+                </div>
+                <!-- 불응기 시간 설정 -->
+                <div class="pt-2 border-t border-slate-100">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-[10px] font-bold text-slate-500">불응기 시간 (Tick)</label>
+                        <input type="number" id="input_globalRefractory" min="0" step="1" value="25" class="w-16 text-[10px] font-mono text-right border rounded px-1 outline-none text-slate-600 py-0.5 bg-slate-50">
+                    </div>
+                    <p class="text-[8px] text-slate-400 text-right">※ 1 Tick ≈ 16ms</p>
+                </div>
             </div>
         </div>
 
@@ -144,7 +192,7 @@
         </div>
 
         <div class="footer-info flex justify-between items-center">
-            <div><span class="font-bold">© 2026. SNN Lab</span> | Pro Analyzer Tool v2.5</div>
+            <div><span class="font-bold">© 2026. SNN Lab</span> | Pro Analyzer Tool v2.8</div>
             <div class="italic text-slate-400 hidden md:block text-[10px]">상단 바를 드래그하여 창을 이동하고, 분석 도구는 모서리를 드래그하여 크기를 조절하세요.</div>
         </div>
     </main>
@@ -156,6 +204,7 @@
         const rasterPanel = document.getElementById('rasterPanel');
         const rasterCanvas = document.getElementById('rasterCanvas');
         const rasterCtx = rasterCanvas.getContext('2d');
+        const globalPanel = document.getElementById('globalPanel'); 
         
         let width, height;
         let isSimulating = true;
@@ -167,6 +216,7 @@
         let isRecording = false;
         let recordedSpikes = []; 
         let recordingStartTime = 0;
+        let realRecordingStartTime = 0; 
         
         let currentTime = 0;
         let isRasterVisible = false;
@@ -174,6 +224,12 @@
 
         let selectedNodes = []; 
         let selectedElement = null; 
+
+        // 광역 설정 상태 변수
+        let globalSpeed = 4.0;
+        let globalFireProb = 1.0;
+        let globalSpontaneousProb = 0.0; // 1초당 기대 발화 확률
+        let globalRefractoryTicks = 25; // 불응기
 
         // --- Window Dragging Logic ---
         function makeMovable(panel, header) {
@@ -191,8 +247,8 @@
                 if (isDragging) {
                     panel.style.left = (e.clientX - offset.x) + 'px';
                     panel.style.top = (e.clientY - offset.y) + 'px';
-                    panel.style.right = 'auto'; // 우측 고정 해제
-                    panel.style.bottom = 'auto'; // 하단 고정 해제
+                    panel.style.right = 'auto'; 
+                    panel.style.bottom = 'auto'; 
                 }
             });
 
@@ -201,8 +257,49 @@
 
         makeMovable(propPanel, document.getElementById('propHeader'));
         makeMovable(rasterPanel, document.getElementById('rasterHeader'));
+        makeMovable(globalPanel, document.getElementById('globalHeader')); 
 
-        // --- Resize Observer for Raster Plot ---
+        function toggleGlobalPanel() {
+            globalPanel.style.display = globalPanel.style.display === 'block' ? 'none' : 'block';
+            if (globalPanel.style.display === 'block') {
+                globalPanel.style.left = '40%';
+                globalPanel.style.top = '100px';
+            }
+        }
+
+        // --- 전역 설정 패널 이벤트 연결 ---
+        document.getElementById('prop_globalSpeed').oninput = (e) => {
+            globalSpeed = parseFloat(e.target.value);
+            document.getElementById('val_globalSpeed').innerText = globalSpeed.toFixed(1);
+        };
+
+        const rangeGlobalProb = document.getElementById('prop_globalProb');
+        const inputGlobalProb = document.getElementById('input_globalProb');
+        
+        rangeGlobalProb.oninput = (e) => {
+            inputGlobalProb.value = e.target.value;
+            globalFireProb = parseFloat(e.target.value) / 100;
+        };
+        inputGlobalProb.oninput = (e) => {
+            let val = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0));
+            rangeGlobalProb.value = val;
+            globalFireProb = val / 100;
+        };
+
+        // 미수신 확률 정밀도 반영 (직접입력)
+        const inputSpontaneousProb = document.getElementById('input_spontaneousProb');
+        inputSpontaneousProb.oninput = (e) => {
+            let val = Math.max(0, parseFloat(e.target.value) || 0);
+            globalSpontaneousProb = val; // 1초당 확률
+        };
+
+        // 불응기 시간 적용
+        const inputGlobalRefractory = document.getElementById('input_globalRefractory');
+        inputGlobalRefractory.oninput = (e) => {
+            let val = Math.max(0, parseInt(e.target.value) || 0);
+            globalRefractoryTicks = val;
+        };
+
         const resizeObserver = new ResizeObserver(entries => {
             for (let entry of entries) {
                 if (entry.target === rasterPanel) {
@@ -242,7 +339,18 @@
                     this.v *= 0.8;
                 } else {
                     this.v *= (1 - this.leak);
-                    if (this.v >= this.threshold) this.fire();
+                    if (this.v >= this.threshold) {
+                        if (Math.random() <= globalFireProb) {
+                            this.fire();
+                        } else {
+                            this.v = 0; 
+                        }
+                    } else {
+                        // 자발적 발화 확률 (1초(약 60프레임) 단위 기준으로 나누어서 계산)
+                        if (globalSpontaneousProb > 0 && Math.random() <= (globalSpontaneousProb / 60)) {
+                            this.fire();
+                        }
+                    }
                 }
                 if (this.spikeAnim > 0) this.spikeAnim *= 0.85;
             }
@@ -250,8 +358,15 @@
             fire() {
                 this.v = 1.2;
                 this.spikeAnim = 1.0;
-                this.refractory = 25;
-                const spikeEvent = { neuronId: this.id, time: currentTime, type: this.type };
+                this.refractory = globalRefractoryTicks; // 광역 설정 불응기 반영
+                
+                const spikeEvent = { 
+                    neuronId: this.id, 
+                    time: currentTime, 
+                    type: this.type,
+                    realTime: performance.now() 
+                };
+                
                 spikeHistory.push(spikeEvent);
                 if (spikeHistory.length > 5000) spikeHistory.shift();
                 if (isRecording) recordedSpikes.push(spikeEvent);
@@ -274,7 +389,7 @@
                 this.type = source.type;
                 this.dist = dist;
                 this.progress = 0;
-                this.speed = 4;
+                this.speed = globalSpeed; 
             }
             update() {
                 this.progress += this.speed;
@@ -356,14 +471,21 @@
             const statusMsg = document.getElementById('statusMsg');
             
             if (!isRecording) {
-                isRecording = true; recordedSpikes = []; recordingStartTime = currentTime;
+                isRecording = true; 
+                recordedSpikes = []; 
+                recordingStartTime = currentTime;
+                realRecordingStartTime = performance.now();
+                
                 btn.innerText = "측정 종료"; btn.classList.replace('bg-white', 'bg-red-500'); btn.classList.replace('text-slate-700', 'text-white');
                 indicator.classList.remove('hidden'); indicator.classList.add('flex');
                 statusMsg.classList.add('hidden');
             } else {
-                isRecording = false; btn.innerText = "측정 시작"; btn.classList.replace('bg-red-500', 'bg-white'); btn.classList.replace('text-white', 'text-slate-700');
+                isRecording = false; 
+                btn.innerText = "측정 시작"; btn.classList.replace('bg-red-500', 'bg-white'); btn.classList.replace('text-white', 'text-slate-700');
                 indicator.classList.replace('flex', 'hidden');
+                
                 exportCSV();
+                
                 statusMsg.classList.remove('hidden');
                 setTimeout(() => statusMsg.classList.add('hidden'), 3000);
             }
@@ -371,12 +493,37 @@
 
         function exportCSV() {
             if (recordedSpikes.length === 0) return;
-            let csvRows = ["=== SPIKE TIME SERIES ===", "Time_Tick,Neuron_ID,Type,Relative_Time_ms"];
-            recordedSpikes.forEach(s => csvRows.push(`${s.time},${s.neuronId},${s.type},${s.time - recordingStartTime}`));
+            
+            const totalTicks = currentTime - recordingStartTime;
+            const totalRealTimeMs = performance.now() - realRecordingStartTime;
+            const avgTickMs = totalTicks > 0 ? (totalRealTimeMs / totalTicks).toFixed(4) : 0;
+
+            let csvRows = [
+                "=== SIMULATION METADATA ===",
+                `Average_Time_Per_Tick_ms,${avgTickMs}`,
+                `Total_Ticks,${totalTicks}`,
+                `Total_Real_Time_ms,${totalRealTimeMs.toFixed(2)}`,
+                "",
+                "=== SPIKE TIME SERIES ===", 
+                "Time_Tick,Neuron_ID,Type,Real_Relative_Time_ms"
+            ];
+            
+            recordedSpikes.forEach(s => {
+                const relativeRealMs = s.realTime ? (s.realTime - realRecordingStartTime).toFixed(2) : ((s.time - recordingStartTime) * avgTickMs).toFixed(2);
+                csvRows.push(`${s.time},${s.neuronId},${s.type},${relativeRealMs}`);
+            });
+            
             csvRows.push("\n=== NETWORK STRUCTURE ===", "Neuron_ID,Type,Threshold,Leak");
             neurons.forEach(n => csvRows.push(`${n.id},${n.type},${n.threshold},${n.leak}`));
-            csvRows.push("\n=== SYNAPSE WEIGHTS ===", "Source_ID,Target_ID,Weight");
-            neurons.forEach(n => n.connections.forEach(c => csvRows.push(`${n.id},${c.targetId},${c.weight}`)));
+            
+            // 뉴런 간 거리 정보(Distance) 추가
+            csvRows.push("\n=== SYNAPSE WEIGHTS ===", "Source_ID,Target_ID,Weight,Distance");
+            neurons.forEach(n => n.connections.forEach(c => {
+                const targetNode = neurons.find(tn => tn.id === c.targetId);
+                const dist = targetNode ? Math.sqrt(Math.pow(n.x - targetNode.x, 2) + Math.pow(n.y - targetNode.y, 2)).toFixed(2) : 0;
+                csvRows.push(`${n.id},${c.targetId},${c.weight},${dist}`);
+            }));
+            
             const blob = new Blob(["\uFEFF" + csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob); 
