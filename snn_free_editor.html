@@ -410,19 +410,40 @@
         function applyGroup() {
             const groupName = document.getElementById('group_name_input').value.trim();
             if (!groupName || selectedNodes.length === 0) return;
+            
+            // 1. 해당 그룹명의 가장 큰 번호(인덱스)를 찾습니다.
+            let maxIndex = 0;
+            const prefix = groupName + '-';
+            
+            neurons.forEach(n => {
+                if (n.id.startsWith(prefix)) {
+                    // prefix 이후의 문자를 숫자로 파싱 (예: "A-3" -> "3")
+                    const numStr = n.id.substring(prefix.length);
+                    const num = parseInt(numStr, 10);
+                    if (!isNaN(num) && num > maxIndex) {
+                        maxIndex = num;
+                    }
+                }
+            });
+
+            // 2. 최대 번호 이후부터 이어서 아이디를 부여합니다.
             const idMap = {};
             selectedNodes.forEach((node, index) => {
                 const oldId = node.id;
-                const newId = `${groupName}-${index + 1}`;
+                // maxIndex 다음 번호부터 할당
+                const newId = `${groupName}-${maxIndex + index + 1}`;
                 idMap[oldId] = newId;
                 node.id = newId;
                 node.isNew = false;
             });
+            
+            // 3. 연결(Synapse) 정보 업데이트
             neurons.forEach(n => {
                 n.connections.forEach(conn => {
                     if (idMap[conn.targetId]) conn.targetId = idMap[conn.targetId];
                 });
             });
+            
             document.getElementById('group_name_input').value = "";
             showPanel(); 
         }
