@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SNN 자유 에디터 Pro + Grouping</title>
+    <title>SNN 자유 에디터 Pro by 친절한 현석쌤</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
@@ -154,7 +154,8 @@
                     <select id="prop_type" class="w-full text-xs p-1.5 border rounded bg-white outline-none">
                         <option value="excitatory">흥분성 (E)</option>
                         <option value="inhibitory">억제성 (I)</option>
-                        <option value="io">입출력 (IO)</option>
+                        <option value="input">입력 (In)</option>
+                        <option value="output">출력 (Out)</option>
                     </select>
                 </div>
                 <div>
@@ -192,8 +193,7 @@
         </div>
 
         <div class="footer-info flex justify-between items-center">
-            <div><span class="font-bold">© 2026. SNN Lab</span> | Pro Analyzer Tool v2.8</div>
-            <div class="italic text-slate-400 hidden md:block text-[10px]">© Kim HyunSeok (tragowl@onedu.jje.go.kr) | 교육적 이용 허용 / 상업적 이용 금지</div>
+            <div><span class="font-bold">© Kim HyunSeok (tragowl@onedu.jje.go.kr)</span> | 교육적 이용 허용 / 상업적 이용 금지</div>
         </div>
     </main>
 
@@ -220,7 +220,9 @@
         
         let currentTime = 0;
         let isRasterVisible = false;
-        let typeCounters = { E: 1, I: 1, IO: 1 };
+        
+        // 입력, 출력 분리로 카운터 변경
+        let typeCounters = { E: 1, I: 1, IN: 1, OUT: 1 };
 
         let selectedNodes = []; 
         let selectedElement = null; 
@@ -327,7 +329,15 @@
             }
 
             generateCleanId(type) {
-                let prefix = type === 'inhibitory' ? 'I' : (type === 'io' ? 'IO' : 'E');
+                let prefix = 'E';
+                if (type === 'inhibitory') prefix = 'I';
+                else if (type === 'input') prefix = 'IN';
+                else if (type === 'output') prefix = 'OUT';
+                else if (type === 'io') prefix = 'IO'; // 하위 호환성
+
+                // 만약 구버전 파일에서 넘어온 타입이 있어 카운터가 없다면 초기화
+                if (typeCounters[prefix] === undefined) typeCounters[prefix] = 1;
+
                 const id = `${prefix}${typeCounters[prefix]}`;
                 typeCounters[prefix]++;
                 return id;
@@ -411,13 +421,11 @@
             const groupName = document.getElementById('group_name_input').value.trim();
             if (!groupName || selectedNodes.length === 0) return;
             
-            // 1. 해당 그룹명의 가장 큰 번호(인덱스)를 찾습니다.
             let maxIndex = 0;
             const prefix = groupName + '-';
             
             neurons.forEach(n => {
                 if (n.id.startsWith(prefix)) {
-                    // prefix 이후의 문자를 숫자로 파싱 (예: "A-3" -> "3")
                     const numStr = n.id.substring(prefix.length);
                     const num = parseInt(numStr, 10);
                     if (!isNaN(num) && num > maxIndex) {
@@ -426,18 +434,15 @@
                 }
             });
 
-            // 2. 최대 번호 이후부터 이어서 아이디를 부여합니다.
             const idMap = {};
             selectedNodes.forEach((node, index) => {
                 const oldId = node.id;
-                // maxIndex 다음 번호부터 할당
                 const newId = `${groupName}-${maxIndex + index + 1}`;
                 idMap[oldId] = newId;
                 node.id = newId;
                 node.isNew = false;
             });
             
-            // 3. 연결(Synapse) 정보 업데이트
             neurons.forEach(n => {
                 n.connections.forEach(conn => {
                     if (idMap[conn.targetId]) conn.targetId = idMap[conn.targetId];
@@ -475,7 +480,7 @@
 
         function importData(data) {
             neurons = []; spikes = []; spikeHistory = []; currentTime = 0;
-            typeCounters = data.typeCounters || { E: 1, I: 1, IO: 1 };
+            typeCounters = data.typeCounters || { E: 1, I: 1, IN: 1, OUT: 1 };
             data.neurons.forEach(nD => {
                 const n = new Neuron(nD.x, nD.y, nD.type, nD.id);
                 n.threshold = nD.threshold || 1.0;
@@ -537,7 +542,6 @@
             csvRows.push("\n=== NETWORK STRUCTURE ===", "Neuron_ID,Type,Threshold,Leak");
             neurons.forEach(n => csvRows.push(`${n.id},${n.type},${n.threshold},${n.leak}`));
             
-            // 뉴런 간 거리 정보(Distance) 추가
             csvRows.push("\n=== SYNAPSE WEIGHTS ===", "Source_ID,Target_ID,Weight,Distance");
             neurons.forEach(n => n.connections.forEach(c => {
                 const targetNode = neurons.find(tn => tn.id === c.targetId);
@@ -645,7 +649,9 @@
                 const x = rasterCanvas.width - (timeDiff / timeWindow) * rasterCanvas.width;
                 const idx = neurons.findIndex(n => n.id === s.neuronId);
                 if (idx !== -1) {
-                    rasterCtx.fillStyle = s.type === 'inhibitory' ? '#ef4444' : '#3b82f6';
+                    rasterCtx.fillStyle = s.type === 'inhibitory' ? '#ef4444' : 
+                                          (s.type === 'input' ? '#10b981' : 
+                                          (s.type === 'output' ? '#8b5cf6' : '#3b82f6'));
                     rasterCtx.fillRect(x, 5 + idx * rowHeight + 1, 2, rowHeight - 2);
                 }
             });
@@ -705,10 +711,11 @@
         }
 
         function init() {
-            typeCounters = { E: 1, I: 1, IO: 1 }; camera = { x: 0, y: 0, zoom: 0.8 }; neurons = []; spikes = []; spikeHistory = []; currentTime = 0;
-            for(let i=0; i<3; i++) neurons.push(new Neuron(-300, -100 + i*100, 'io'));
+            typeCounters = { E: 1, I: 1, IN: 1, OUT: 1 }; 
+            camera = { x: 0, y: 0, zoom: 0.8 }; neurons = []; spikes = []; spikeHistory = []; currentTime = 0;
+            for(let i=0; i<3; i++) neurons.push(new Neuron(-300, -100 + i*100, 'input'));
             for(let i=0; i<4; i++) neurons.push(new Neuron(0, -150 + i*100, 'excitatory'));
-            for(let i=0; i<2; i++) neurons.push(new Neuron(300, -50 + i*100, 'io'));
+            for(let i=0; i<2; i++) neurons.push(new Neuron(300, -50 + i*100, 'output'));
             closePanel();
         }
 
@@ -738,7 +745,12 @@
             spikes.forEach(s => {
                 const r = s.progress / s.dist, pos = worldToScreen(s.source.x + (s.target.x - s.source.x) * r, s.source.y + (s.target.y - s.source.y) * r);
                 ctx.beginPath(); ctx.arc(pos.x, pos.y, 5 * camera.zoom, 0, Math.PI * 2);
-                ctx.fillStyle = s.type === 'inhibitory' ? '#ef4444' : '#3b82f6'; ctx.fill();
+                
+                // 스파이크 색상도 입력/출력/흥분성/억제성에 맞게 변경
+                ctx.fillStyle = s.type === 'inhibitory' ? '#ef4444' : 
+                              (s.type === 'input' ? '#10b981' : 
+                              (s.type === 'output' ? '#8b5cf6' : '#3b82f6')); 
+                ctx.fill();
             });
             neurons.forEach(n => {
                 const pos = worldToScreen(n.x, n.y), isSelected = selectedNodes.includes(n) || selectedElement?.data === n, r = (26 + n.spikeAnim * 12) * camera.zoom;
@@ -748,7 +760,14 @@
                 }
                 if (isSelected) { ctx.beginPath(); ctx.arc(pos.x, pos.y, r + 8, 0, Math.PI * 2); ctx.fillStyle = 'rgba(59, 130, 246, 0.2)'; ctx.fill(); }
                 ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
-                ctx.fillStyle = n.type === 'inhibitory' ? '#ef4444' : (n.type === 'io' ? '#94a3b8' : '#3b82f6'); ctx.fill();
+                
+                // 뉴런 본체 색상: 억제성(빨강), 입력(초록), 출력(보라), 흥분성(파랑), 과거io(회색)
+                ctx.fillStyle = n.type === 'inhibitory' ? '#ef4444' : 
+                              (n.type === 'input' ? '#10b981' : 
+                              (n.type === 'output' ? '#8b5cf6' : 
+                              (n.type === 'io' ? '#94a3b8' : '#3b82f6'))); 
+                ctx.fill();
+                
                 ctx.strokeStyle = isSelected ? '#3b82f6' : (n === hoveredNode ? '#1e293b' : '#fff');
                 ctx.lineWidth = (isSelected ? 6 : 2.5) * camera.zoom; ctx.stroke();
                 if (n.v > 0.02 && n.refractory === 0) {
