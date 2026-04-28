@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPM (주사탐침현미경) 원리 학습 시뮬레이터</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js (1단계 3D 애니메이션용) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Plotly.js (3단계 3D 데이터 플로팅용) -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        .step-container { display: none; }
+        .step-container.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* 2단계 데이터 테이블 입력칸 스타일 */
+        .data-input { 
+            width: 60px; height: 36px; text-align: center; border: 1px solid #e2e8f0; 
+            border-radius: 4px; outline: none; transition: all 0.2s;
+        }
+        .data-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-6 shadow-md">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    SPM 원리 학습 시뮬레이터
+                </h1>
+                <p class="text-blue-200 mt-1 text-sm">주사탐침현미경의 스캔부터 3D 데이터 시각화까지의 과정</p>
+                <p class="text-blue-200 mt-2 text-xs opacity-80">© 교육적 목적 자유 이용 가능, 상업적 이용 금지 | tragowl@onedu.jje.go.kr</p>
+            </div>
+            <!-- Progress Indicator -->
+            <div class="flex gap-4 items-center hidden sm:flex">
+                <div class="flex flex-col items-center"><div id="ind-1" class="w-8 h-8 rounded-full bg-white text-blue-600 flex items-center justify-center font-bold">1</div><span class="text-xs mt-1">격자설정</span></div>
+                <div class="w-8 h-0.5 bg-blue-400"></div>
+                <div class="flex flex-col items-center"><div id="ind-2" class="w-8 h-8 rounded-full bg-blue-800 text-white flex items-center justify-center font-bold">2</div><span class="text-xs mt-1 text-blue-200">데이터입력</span></div>
+                <div class="w-8 h-0.5 bg-blue-400"></div>
+                <div class="flex flex-col items-center"><div id="ind-3" class="w-8 h-8 rounded-full bg-blue-800 text-white flex items-center justify-center font-bold">3</div><span class="text-xs mt-1 text-blue-200">3D플롯</span></div>
+                <div class="w-8 h-0.5 bg-blue-400"></div>
+                <div class="flex flex-col items-center"><div id="ind-4" class="w-8 h-8 rounded-full bg-blue-800 text-white flex items-center justify-center font-bold">4</div><span class="text-xs mt-1 text-blue-200">개념학습</span></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow p-6 max-w-6xl mx-auto w-full">
+        
+        <!-- ================= STEP 1 ================= -->
+        <div id="step-1" class="step-container active">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h2 class="text-xl font-bold text-slate-700">1단계: 측정 격자(Grid) 크기 설정</h2>
+                </div>
+                
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <p class="text-slate-600 mb-6 leading-relaxed">
+                            SPM(Scanning Probe Microscopy)은 뾰족한 탐침(Probe)을 이용해 샘플 표면을 X축, Y축으로 미세하게 이동하며 Z축(높이 또는 상호작용력) 데이터를 수집합니다. <br><br>
+                            스캔할 표면을 몇 개의 격자(Grid)로 나누어 측정할지 가로(X)와 세로(Y) 크기를 입력해주세요.
+                        </p>
+                        
+                        <div class="space-y-4 max-w-sm">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">X축 격자 수 (너비)</label>
+                                <input type="number" id="input-x" value="10" min="3" max="40" class="w-full p-2 border border-slate-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                <p class="text-xs text-slate-400 mt-1">권장: 5 ~ 30 (최대 40)</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Y축 격자 수 (길이)</label>
+                                <input type="number" id="input-y" value="10" min="3" max="40" class="w-full p-2 border border-slate-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        
+                        <button onclick="goToStep(2)" class="mt-8 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition-colors flex items-center gap-2">
+                            다음 단계로: Z값 입력하기
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                    </div>
+                    
+                    <!-- 3D SPM Demo -->
+                    <div class="bg-slate-900 rounded-lg overflow-hidden relative" style="height: 400px;">
+                        <div class="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-mono backdrop-blur-sm pointer-events-none z-10">
+                            SPM Scanning Demo (Three.js)
+                        </div>
+                        <div id="spm-canvas-container" class="w-full h-full"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= STEP 2 ================= -->
+        <div id="step-2" class="step-container">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+                <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center flex-wrap gap-4">
+                    <h2 class="text-xl font-bold text-slate-700">2단계: Z축 측정 데이터 입력</h2>
+                    <div class="flex gap-2">
+                        <button onclick="generateSampleData('gaussian')" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded hover:bg-indigo-100 text-sm font-medium transition">
+                            🏔️ 가우시안 (언덕)
+                        </button>
+                        <button onclick="generateSampleData('wave')" class="px-3 py-1.5 bg-teal-50 text-teal-700 border border-teal-200 rounded hover:bg-teal-100 text-sm font-medium transition">
+                            🌊 파동 형태
+                        </button>
+                        <button onclick="generateSampleData('random')" class="px-3 py-1.5 bg-orange-50 text-orange-700 border border-orange-200 rounded hover:bg-orange-100 text-sm font-medium transition">
+                            🎲 무작위 거칠기
+                        </button>
+                        <button onclick="generateSampleData('flat')" class="px-3 py-1.5 bg-slate-100 text-slate-700 border border-slate-200 rounded hover:bg-slate-200 text-sm font-medium transition">
+                            ➖ 평면 초기화
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <p class="text-slate-600 mb-4 text-sm">
+                        설정된 <span id="grid-size-display" class="font-bold text-blue-600">0x0</span> 격자에 해당하는 각 포인트의 높이(Z) 값을 입력합니다. <br>
+                        상단 버튼을 눌러 샘플 데이터를 자동으로 채워보세요. 직접 수정도 가능합니다.
+                    </p>
+                    
+                    <!-- 데이터 업로드/다운로드 버튼 -->
+                    <div class="flex gap-2 mb-4">
+                        <button onclick="downloadCSV()" class="px-4 py-2 bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100 text-sm font-medium transition flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            엑셀 양식 다운로드 (CSV)
+                        </button>
+                        <label class="px-4 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded hover:bg-purple-100 text-sm font-medium transition cursor-pointer flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            데이터 파일 업로드 (CSV)
+                            <input type="file" id="csv-upload" accept=".csv" class="hidden" onchange="uploadCSV(event)">
+                        </label>
+                    </div>
+                    
+                    <div class="overflow-auto border border-slate-200 rounded-lg bg-slate-50 max-h-[500px] relative">
+                        <table id="data-table" class="mx-auto border-collapse w-full">
+                            <!-- Table will be generated by JS -->
+                        </table>
+                    </div>
+                    
+                    <div class="flex justify-between mt-8">
+                        <button onclick="goToStep(1)" class="px-6 py-3 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold rounded-lg transition-colors">
+                            이전 단계
+                        </button>
+                        <button onclick="goToStep(3)" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition-colors flex items-center gap-2">
+                            3D 플롯 생성하기
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= STEP 3 ================= -->
+        <div id="step-3" class="step-container">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row h-[700px]">
+                
+                <!-- Sidebar -->
+                <div class="w-full md:w-64 border-b md:border-b-0 md:border-r border-slate-200 bg-slate-50 p-6 flex flex-col">
+                    <h2 class="text-lg font-bold text-slate-700 mb-6">3D 플롯 렌더링 옵션</h2>
+                    
+                    <div class="space-y-3 flex-grow">
+                        <button onclick="renderPlot('lines')" class="plot-btn w-full text-left px-4 py-3 rounded-lg border border-slate-200 bg-white hover:border-blue-500 hover:text-blue-600 font-medium transition active-plot">
+                            〰️ 스캔 라인 (X-axis)
+                        </button>
+                        <button onclick="renderPlot('surface')" class="plot-btn w-full text-left px-4 py-3 rounded-lg border border-slate-200 bg-white hover:border-blue-500 hover:text-blue-600 font-medium transition">
+                            🗺️ 표면 렌더링 (Surf)
+                        </button>
+                        <button onclick="renderPlot('contour')" class="plot-btn w-full text-left px-4 py-3 rounded-lg border border-slate-200 bg-white hover:border-blue-500 hover:text-blue-600 font-medium transition">
+                            🧭 3D 등고선 맵 (Contour)
+                        </button>
+                        <button onclick="renderPlot('bar')" class="plot-btn w-full text-left px-4 py-3 rounded-lg border border-slate-200 bg-white hover:border-blue-500 hover:text-blue-600 font-medium transition">
+                            📊 3차원 히스토그램 (3D Bar)
+                        </button>
+                    </div>
+                    
+                    <div class="mt-auto space-y-3 pt-6 border-t border-slate-200">
+                        <button onclick="goToStep(4)" class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm font-bold transition flex justify-center items-center gap-2">
+                            4단계: 원리 학습하기
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                        <div class="flex gap-2">
+                            <button onclick="goToStep(2)" class="w-1/2 px-2 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded shadow-sm text-xs font-medium transition">
+                                데이터 수정
+                            </button>
+                            <button onclick="location.reload()" class="w-1/2 px-2 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded shadow-sm text-xs font-medium transition">
+                                처음부터
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Plot Area -->
+                <div class="flex-grow relative bg-white p-4 flex flex-col">
+                    <div id="plot-title" class="text-center font-bold text-lg text-slate-700 mb-2">3D 표면 렌더링</div>
+                    <p id="plot-desc" class="text-center text-sm text-slate-500 mb-4">측정된 포인트들을 부드러운 곡면으로 연결하여 샘플의 전체적인 표면 형상을 보여줍니다.</p>
+                    <div id="plotly-div" class="flex-grow w-full h-full"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= STEP 4 ================= -->
+        <div id="step-4" class="step-container">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h2 class="text-xl font-bold text-slate-700">4단계: SPM 핵심 개념 및 활용 분야</h2>
+                </div>
+                
+                <div class="p-6 md:p-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Card 1: What is SPM -->
+                        <div class="bg-blue-50 rounded-xl p-6 border border-blue-100">
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="text-2xl">🔬</span>
+                                <h3 class="text-lg font-bold text-blue-900">SPM 이란 무엇인가요?</h3>
+                            </div>
+                            <p class="text-slate-700 text-sm leading-relaxed">
+                                <strong>SPM (Scanning Probe Microscopy, 주사탐침현미경)</strong>은 아주 뾰족한 바늘(탐침, Probe)을 이용하여 시료의 표면을 훑으면서(Scanning) 나노미터(nm) 단위의 미세한 3차원 형상을 측정하는 첨단 현미경입니다. <br><br>
+                                빛이나 전자를 이용하는 일반 현미경과 달리, <strong>물리적인 상호작용</strong>을 직접 측정하므로 진공 상태가 아니어도 측정 가능하며 3차원 높이 데이터를 직접 얻을 수 있습니다.
+                            </p>
+                        </div>
+
+                        <!-- Card 2: Core Principles -->
+                        <div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100">
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="text-2xl">⚙️</span>
+                                <h3 class="text-lg font-bold text-indigo-900">작동 원리 (피드백 루프)</h3>
+                            </div>
+                            <p class="text-slate-700 text-sm leading-relaxed">
+                                1단계에서 보았듯 캔틸레버 끝의 탐침이 표면에 다가가면 원자 간의 힘이 발생하여 캔틸레버가 휘어집니다. <br><br>
+                                <strong>레이저 반사:</strong> 캔틸레버 등에 레이저를 쏘아 반사되는 빛의 위치 변화를 광검출기가 감지합니다.<br>
+                                <strong>피드백 제어:</strong> 휘어짐이 일정하게 유지되도록 Z축(높이) 스캐너를 미세하게 올리고 내립니다. 이 Z축의 이동 기록이 바로 우리가 2단계에서 입력한 <strong>디지털 높이 데이터</strong>가 됩니다.
+                            </p>
+                        </div>
+
+                        <!-- Card 3: Types of SPM -->
+                        <div class="bg-teal-50 rounded-xl p-6 border border-teal-100">
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="text-2xl">분류</span>
+                                <h3 class="text-lg font-bold text-teal-900">SPM의 주요 종류</h3>
+                            </div>
+                            <ul class="text-slate-700 text-sm leading-relaxed space-y-3">
+                                <li><strong>AFM (원자힘현미경):</strong> 탐침과 표면 원자 사이의 <em>인력/척력(원자간 힘)</em>을 측정합니다. 전기가 통하지 않는 부도체나 생체 시료도 관찰할 수 있어 가장 널리 쓰입니다.</li>
+                                <li><strong>STM (주사터널링현미경):</strong> 탐침과 표면 사이에 흐르는 미세한 <em>터널링 전류</em>를 측정합니다. 원자 하나하나를 볼 수 있을 정도로 해상도가 높지만, 전기가 통하는 시료에만 쓸 수 있습니다.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Card 4: Applications -->
+                        <div class="bg-amber-50 rounded-xl p-6 border border-amber-100">
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="text-2xl">🚀</span>
+                                <h3 class="text-lg font-bold text-amber-900">주요 활용 분야</h3>
+                            </div>
+                            <ul class="text-slate-700 text-sm leading-relaxed list-disc list-inside space-y-2">
+                                <li><strong>반도체 및 디스플레이:</strong> 나노미터 수준의 회로 선폭 측정 및 표면 불량 검사</li>
+                                <li><strong>바이오 및 의학:</strong> DNA 구조, 단백질, 세포의 실시간 3차원 형태 및 기계적 특성 분석</li>
+                                <li><strong>신소재 및 나노기술:</strong> 그래핀, 탄소나노튜브 등 2차원 물질의 두께 및 표면 특성 연구</li>
+                                <li><strong>배터리:</strong> 전극 표면의 실시간 변화 및 거칠기 관찰</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- 실제 SPM 예시 이미지 섹션 추가 -->
+                    <div class="mt-8 bg-slate-100 rounded-xl p-6 border border-slate-200">
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="text-2xl">📸</span>
+                            <h3 class="text-lg font-bold text-slate-800">실제 SPM 측정 이미지 예시</h3>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col items-center text-center">
+                                <div class="w-full h-40 bg-slate-200 flex items-center justify-center rounded mb-4 text-slate-500 overflow-hidden text-xs px-2 break-keep">
+                                    
+                                </div>
+                                <p class="text-sm font-bold text-slate-700">반도체 나노 패턴 (AFM)</p>
+                                <p class="text-xs text-slate-500 mt-2 leading-relaxed">수 나노미터 수준의 반도체 회로 선폭과 깊이를 3차원 지형도로 측정한 모습</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col items-center text-center">
+                                <div class="w-full h-40 bg-slate-200 flex items-center justify-center rounded mb-4 text-slate-500 overflow-hidden text-xs px-2 break-keep">
+                                    
+                                </div>
+                                <p class="text-sm font-bold text-slate-700">금(Au) 표면 원자 배열 (STM)</p>
+                                <p class="text-xs text-slate-500 mt-2 leading-relaxed">원자 하나하나가 올록볼록하게 배열된 모습을 직접 관찰한 초고해상도 데이터</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col items-center text-center">
+                                <div class="w-full h-40 bg-slate-200 flex items-center justify-center rounded mb-4 text-slate-500 overflow-hidden text-xs px-2 break-keep">
+                                    
+                                </div>
+                                <p class="text-sm font-bold text-slate-700">적혈구 세포 표면 (AFM)</p>
+                                <p class="text-xs text-slate-500 mt-2 leading-relaxed">진공이 아닌 일반/액체 환경에서도 생체 세포의 미세한 질감을 손상 없이 측정</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex justify-center">
+                        <button onclick="goToStep(3)" class="px-6 py-3 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold rounded-lg transition-colors flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            3D 플롯 다시보기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Global Variables ---
+        let currentStep = 1;
+        let gridX = 10;
+        let gridY = 10;
+        let zData = []; // 2D array [Y][X]
+        let currentPlotType = 'lines'; // 기본값을 스캔 라인으로 변경
+
+        // --- Step Navigation ---
+        function goToStep(step) {
+            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+            document.getElementById(`step-${step}`).classList.add('active');
+            
+            // Update Indicators
+            [1, 2, 3, 4].forEach(s => {
+                const ind = document.getElementById(`ind-${s}`);
+                const textSpan = ind.nextElementSibling;
+                if (s === step) {
+                    ind.className = 'w-8 h-8 rounded-full bg-white text-blue-600 flex items-center justify-center font-bold';
+                    textSpan.classList.remove('text-blue-200');
+                    textSpan.classList.add('text-white');
+                } else if (s < step) {
+                    ind.className = 'w-8 h-8 rounded-full bg-blue-400 text-white flex items-center justify-center font-bold';
+                    textSpan.classList.remove('text-white');
+                    textSpan.classList.add('text-blue-200');
+                } else {
+                    ind.className = 'w-8 h-8 rounded-full bg-blue-800 text-white flex items-center justify-center font-bold';
+                    textSpan.classList.remove('text-white');
+                    textSpan.classList.add('text-blue-200');
+                }
+            });
+
+            if (step === 2) {
+                initStep2();
+            } else if (step === 3) {
+                initStep3();
+            }
+        }
+
+        // --- Step 2: Data Input Table ---
+        function initStep2() {
+            gridX = parseInt(document.getElementById('input-x').value) || 10;
+            gridY = parseInt(document.getElementById('input-y').value) || 10;
+            
+            // Limit sizes to prevent browser hang
+            if (gridX > 40) gridX = 40;
+            if (gridY > 40) gridY = 40;
+            
+            document.getElementById('grid-size-display').innerText = `${gridX} × ${gridY}`;
+            
+            // Initialize data if dimension changed or empty
+            if (zData.length !== gridY || (zData[0] && zData[0].length !== gridX)) {
+                zData = Array.from({ length: gridY }, () => Array(gridX).fill(0));
+                generateSampleData('gaussian'); // Default sample
+            } else {
+                renderTable();
+            }
+        }
+
+        function renderTable() {
+            const table = document.getElementById('data-table');
+            table.innerHTML = '';
+            
+            // 행/열 인덱스를 위한 Header 구성
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            
+            // 좌측 상단 빈칸
+            const cornerTh = document.createElement('th');
+            cornerTh.className = 'bg-slate-200 sticky top-0 left-0 z-20 border border-slate-300 w-12';
+            headerRow.appendChild(cornerTh);
+            
+            // 열 번호 (X1, X2 ...)
+            for (let x = 0; x < gridX; x++) {
+                const th = document.createElement('th');
+                th.className = 'text-xs text-slate-600 font-bold p-2 bg-slate-200 border border-slate-300 sticky top-0 z-10 min-w-[60px]';
+                th.innerText = `X${x + 1}`;
+                headerRow.appendChild(th);
+            }
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            const tbody = document.createElement('tbody');
+            for (let y = 0; y < gridY; y++) {
+                const tr = document.createElement('tr');
+                
+                // 행 번호 (Y1, Y2 ...)
+                const rowHeader = document.createElement('th');
+                rowHeader.className = 'text-xs text-slate-600 font-bold p-2 bg-slate-200 border border-slate-300 sticky left-0 z-10';
+                rowHeader.innerText = `Y${y + 1}`;
+                tr.appendChild(rowHeader);
+
+                for (let x = 0; x < gridX; x++) {
+                    const td = document.createElement('td');
+                    td.className = 'p-0 border border-slate-200 bg-white hover:bg-blue-50 transition-colors';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.className = 'w-full h-full text-center text-sm p-2 outline-none bg-transparent focus:ring-2 focus:ring-blue-400 focus:bg-blue-50';
+                    input.value = zData[y][x].toFixed(1);
+                    input.step = '0.1';
+                    input.dataset.x = x;
+                    input.dataset.y = y;
+                    
+                    input.addEventListener('change', (e) => {
+                        const val = parseFloat(e.target.value);
+                        zData[e.target.dataset.y][e.target.dataset.x] = isNaN(val) ? 0 : val;
+                    });
+                    
+                    td.appendChild(input);
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            }
+            table.appendChild(tbody);
+        }
+
+        // CSV 다운로드 함수
+        function downloadCSV() {
+            let csvContent = "";
+            for (let y = 0; y < gridY; y++) {
+                let row = zData[y].join(",");
+                csvContent += row + "\r\n";
+            }
+            // 한글 엑셀 호환을 위한 BOM 추가
+            const bom = "\uFEFF";
+            const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `spm_data_template_${gridX}x${gridY}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // CSV 업로드 함수
+        function uploadCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                // 줄바꿈 기준으로 행 분리
+                const lines = text.trim().split(/\r\n|\n/);
+                if (lines.length === 0) return;
+
+                // 최대 40x40으로 제한
+                const newY = Math.min(lines.length, 40);
+                const newX = Math.min(lines[0].split(',').length, 40);
+
+                let newData = [];
+                for (let y = 0; y < newY; y++) {
+                    const cols = lines[y].split(',');
+                    let newRow = [];
+                    for (let x = 0; x < newX; x++) {
+                        let val = parseFloat(cols[x]);
+                        newRow.push(isNaN(val) ? 0 : val);
+                    }
+                    newData.push(newRow);
+                }
+
+                // 글로벌 변수 업데이트
+                gridY = newY;
+                gridX = newX;
+                zData = newData;
+
+                // 1단계 입력창 값도 동기화
+                document.getElementById('input-x').value = gridX;
+                document.getElementById('input-y').value = gridY;
+                document.getElementById('grid-size-display').innerText = `${gridX} × ${gridY}`;
+
+                renderTable();
+                
+                // 파일 인풋 초기화 (같은 파일 다시 업로드 가능하도록)
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function generateSampleData(type) {
+            for (let y = 0; y < gridY; y++) {
+                for (let x = 0; x < gridX; x++) {
+                    let val = 0;
+                    
+                    // Normalize coordinates -1 to 1
+                    const nx = (x / (gridX - 1)) * 2 - 1;
+                    const ny = (y / (gridY - 1)) * 2 - 1;
+
+                    if (type === 'gaussian') {
+                        // Gaussian hill at center
+                        const r2 = nx*nx + ny*ny;
+                        val = 15 * Math.exp(-r2 * 3);
+                    } else if (type === 'wave') {
+                        // Sin/Cos waves
+                        val = 5 * Math.sin(nx * Math.PI * 2) + 5 * Math.cos(ny * Math.PI * 2) + 10;
+                    } else if (type === 'random') {
+                        val = Math.random() * 10;
+                    } else if (type === 'flat') {
+                        val = 0;
+                    }
+                    
+                    zData[y][x] = parseFloat(val.toFixed(1));
+                }
+            }
+            renderTable();
+        }
+
+        // --- Step 3: Plotly 3D Graphs ---
+        const plotDescriptions = {
+            'lines': { title: 'X축 스캔 라인 (Scan Lines)', desc: 'SPM 탐침이 X축 방향으로 한 줄씩 스캔하며 지나간 궤적을 개별적인 선(Line)으로 보여줍니다. 실제 원시(Raw) 측정 데이터의 형태입니다.' },
+            'surface': { title: '표면 렌더링 (Surf Plot)', desc: '측정된 포인트들을 부드러운 곡면으로 연결하고 높이에 따른 색상(Colormap)과 격자선(Grid)을 함께 표시하여 전체적인 표면 형상을 직관적으로 보여줍니다.' },
+            'contour': { title: '3D 등고선 맵 (Contour Map)', desc: '동일한 Z 높이를 가진 지점들을 선으로 연결하여 지형도의 등고선처럼 표현합니다. 3차원 공간에서 높낮이를 확인하기 좋습니다.' },
+            'bar': { title: '3차원 히스토그램 (3D Bar)', desc: '각 격자점의 측정값을 개별적인 육면체 기둥으로 표현하여 데이터가 디지털 격자 형태로 수집됨을 명확히 보여줍니다.' }
+        };
+
+        function initStep3() {
+            renderPlot('lines');
+        }
+
+        function renderPlot(type) {
+            currentPlotType = type;
+            
+            // Update UI styles
+            document.querySelectorAll('.plot-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'text-blue-600', 'bg-blue-50', 'ring-1', 'ring-blue-500');
+                if(btn.onclick.toString().includes(`'${type}'`)) {
+                    btn.classList.add('border-blue-500', 'text-blue-600', 'bg-blue-50', 'ring-1', 'ring-blue-500');
+                }
+            });
+            
+            document.getElementById('plot-title').innerText = plotDescriptions[type].title;
+            document.getElementById('plot-desc').innerText = plotDescriptions[type].desc;
+
+            const div = document.getElementById('plotly-div');
+            let data = [];
+            
+            // Generate X and Y axes arrays
+            const xArr = Array.from({length: gridX}, (_, i) => i);
+            const yArr = Array.from({length: gridY}, (_, i) => i);
+
+            const layout = {
+                margin: { l: 0, r: 0, b: 0, t: 0 },
+                scene: {
+                    xaxis: { title: 'X Axis (스캔 방향)' },
+                    yaxis: { title: 'Y Axis (스텝 방향)' },
+                    zaxis: { title: 'Z Axis (높이)' },
+                    camera: { eye: {x: 1.5, y: 1.5, z: 1.2} }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                autosize: true
+            };
+
+            if (type === 'lines') {
+                // One trace per Y row to simulate scan lines
+                for(let y=0; y<gridY; y++){
+                    data.push({
+                        x: xArr,
+                        y: Array(gridX).fill(y),
+                        z: zData[y],
+                        type: 'scatter3d',
+                        mode: 'lines',
+                        line: { width: 6, color: '#10b981' },
+                        name: `Scan Y=${y}`
+                    });
+                }
+                layout.showlegend = false;
+            }
+            else if (type === 'surface') {
+                // MATLAB surf 스타일: 면을 색상으로 채우고 격자선을 추가
+                data.push({
+                    z: zData,
+                    x: xArr,
+                    y: yArr,
+                    type: 'surface',
+                    colorscale: 'Jet', // MATLAB 기본 콜로맵과 유사한 색상
+                    contours: {
+                        x: { show: true, color: '#000', width: 4, highlight: false }, // 격자선 굵기 2 -> 4 로 증가
+                        y: { show: true, color: '#000', width: 4, highlight: false }, // 격자선 굵기 2 -> 4 로 증가
+                        z: { show: false }
+                    }
+                });
+            } 
+            else if (type === 'contour') {
+                // 3차원 등고선으로 렌더링하도록 수정
+                data.push({
+                    z: zData,
+                    x: xArr,
+                    y: yArr,
+                    type: 'surface',
+                    colorscale: 'Earth',
+                    hidesurface: true, // 표면은 투명하게 처리
+                    contours: {
+                        z: { 
+                            show: true, 
+                            usecolormap: true, 
+                            width: 8, // 등고선 굵기 5 -> 8 로 증가
+                            project: { z: false } // 바닥에 투영하지 않고 원래 3D 높이에 유지
+                        }
+                    }
+                });
+            }
+            else if (type === 'bar') {
+                // Build 3D Box meshes for histogram manually
+                let flatX=[], flatY=[], flatZ=[];
+                let i_idx=[], j_idx=[], k_idx=[];
+                let vCount = 0;
+                let w = 0.4; // Box half-width
+                
+                for(let r=0; r<gridY; r++){
+                    for(let c=0; c<gridX; c++){
+                        let zVal = zData[r][c];
+                        if (zVal === 0) zVal = 0.01; // Render tiny box for 0
+                        
+                        // 8 Vertices
+                        flatX.push(c-w, c+w, c+w, c-w, c-w, c+w, c+w, c-w);
+                        flatY.push(r-w, r-w, r+w, r+w, r-w, r-w, r+w, r+w);
+                        flatZ.push(0, 0, 0, 0, zVal, zVal, zVal, zVal);
+                        
+                        let base = vCount;
+                        // Bottom
+                        i_idx.push(base, base); j_idx.push(base+1, base+2); k_idx.push(base+2, base+3);
+                        // Top
+                        i_idx.push(base+4, base+4); j_idx.push(base+5, base+6); k_idx.push(base+6, base+7);
+                        // Front
+                        i_idx.push(base, base); j_idx.push(base+1, base+5); k_idx.push(base+5, base+4);
+                        // Right
+                        i_idx.push(base+1, base+1); j_idx.push(base+2, base+6); k_idx.push(base+6, base+5);
+                        // Back
+                        i_idx.push(base+2, base+2); j_idx.push(base+3, base+7); k_idx.push(base+7, base+6);
+                        // Left
+                        i_idx.push(base+3, base+3); j_idx.push(base+0, base+4); k_idx.push(base+4, base+7);
+                        
+                        vCount += 8;
+                    }
+                }
+                
+                data.push({
+                    x: flatX, y: flatY, z: flatZ,
+                    i: i_idx, j: j_idx, k: k_idx,
+                    type: 'mesh3d',
+                    color: '#f59e0b',
+                    flatshading: true,
+                    opacity: 0.95
+                });
+            }
+
+            Plotly.react(div, data, layout, {responsive: true});
+        }
+
+
+        // --- Three.js SPM Simulation (Step 1) ---
+        let scene, camera, renderer, tipMesh, gridHelper, animationId;
+        let scanParams = { x: 0, y: 0, dir: 1, stepReady: false };
+        
+        // 표면 높이를 계산하는 함수 (요철 생성용)
+        function getSurfaceHeight(x, z) {
+            const r2 = x*x + z*z;
+            const hill = 2.0 * Math.exp(-r2 * 0.2); // 중앙 언덕
+            const rough = 0.2 * Math.sin(x * 3) + 0.2 * Math.cos(z * 3); // 표면 파동
+            return hill + rough;
+        }
+        
+        function initThreeJS() {
+            const container = document.getElementById('spm-canvas-container');
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a); // slate-900
+            
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(15, 12, 15);
+            camera.lookAt(0, 0, 0);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 20, 10);
+            scene.add(dirLight);
+
+            // Sample Surface (Grid)
+            const gridGeom = new THREE.PlaneGeometry(10, 10, 60, 60); // 요철 표현을 위해 해상도 증가
+            
+            // 표면 요철 적용
+            const positions = gridGeom.attributes.position;
+            for(let i = 0; i < positions.count; i++) {
+                const vx = positions.getX(i);
+                const vy = positions.getY(i);
+                // 회전 전 로컬 좌표계에서 Z값을 수정 (이후 -PI/2 회전 시 World Y축 높이가 됨)
+                const vz = getSurfaceHeight(vx, -vy); 
+                positions.setZ(i, vz);
+            }
+            gridGeom.computeVertexNormals();
+
+            const gridMat = new THREE.MeshPhongMaterial({ color: 0x3b82f6, wireframe: true, side: THREE.DoubleSide });
+            const surface = new THREE.Mesh(gridGeom, gridMat);
+            surface.rotation.x = -Math.PI / 2; // 바른 방향으로 수정
+            scene.add(surface);
+            
+            // Base plate for visual appeal
+            const plateGeom = new THREE.PlaneGeometry(10.2, 10.2);
+            const plateMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, side: THREE.DoubleSide });
+            const plate = new THREE.Mesh(plateGeom, plateMat);
+            plate.rotation.x = -Math.PI / 2;
+            plate.position.y = -1.0; // 요철이 아래로 내려갈 수 있으므로 판을 더 아래로 배치
+            scene.add(plate);
+
+            // SPM Tip & Cantilever
+            const tipGroup = new THREE.Group();
+            
+            // Tip (Cone)
+            const tipGeom = new THREE.ConeGeometry(0.2, 1, 16);
+            const tipMat = new THREE.MeshPhongMaterial({ color: 0xfacc15 }); // yellow
+            tipMesh = new THREE.Mesh(tipGeom, tipMat);
+            tipMesh.position.y = 0.5; // point touches origin
+            tipMesh.rotation.x = Math.PI; // point down
+            tipGroup.add(tipMesh);
+            
+            // Cantilever Beam
+            const beamGeom = new THREE.BoxGeometry(0.6, 0.1, 4);
+            const beamMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8 });
+            const beam = new THREE.Mesh(beamGeom, beamMat);
+            beam.position.set(0, 1.05, 1.8);
+            tipGroup.add(beam);
+            
+            // Laser beam (Red line)
+            const laserMat = new THREE.LineBasicMaterial({ color: 0xef4444 });
+            const laserGeom = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 5, -2), // from laser source
+                new THREE.Vector3(0, 1.1, 0), // hit cantilever
+                new THREE.Vector3(0, 5, 2)    // to detector
+            ]);
+            const laser = new THREE.Line(laserGeom, laserMat);
+            tipGroup.add(laser);
+
+            scene.add(tipGroup);
+
+            // Start Animation Loop
+            scanParams = { x: -5, y: -5, dir: 1, speed: 0.05 }; // 요철을 잘 볼 수 있게 스캔 속도 약간 감속
+            tipGroup.position.set(scanParams.x, 0, scanParams.y);
+
+            function animate() {
+                animationId = requestAnimationFrame(animate);
+                
+                // Raster Scan Logic
+                scanParams.x += scanParams.speed * scanParams.dir;
+                
+                if (scanParams.x > 5) {
+                    scanParams.x = 5;
+                    scanParams.dir = -1;
+                    scanParams.y += 1; // Step forward
+                } else if (scanParams.x < -5) {
+                    scanParams.x = -5;
+                    scanParams.dir = 1;
+                    scanParams.y += 1;
+                }
+                
+                if (scanParams.y > 5) {
+                    scanParams.y = -5; // Reset scan
+                    scanParams.x = -5;
+                    scanParams.dir = 1;
+                }
+                
+                // 현재 위치의 표면 높이를 계산하여 탐침 높이(Z축, Three.js에선 Y축)에 반영
+                const currentHeight = getSurfaceHeight(scanParams.x, scanParams.y);
+                
+                // Add tiny vertical vibration to simulate tapping mode or noise
+                const zHover = currentHeight + Math.sin(Date.now() * 0.02) * 0.05 + 0.02;
+                
+                tipGroup.position.set(scanParams.x, zHover, scanParams.y);
+                
+                renderer.render(scene, camera);
+            }
+            animate();
+            
+            // Handle Resize
+            window.addEventListener('resize', () => {
+                if (document.getElementById('step-1').classList.contains('active')) {
+                    camera.aspect = container.clientWidth / container.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(container.clientWidth, container.clientHeight);
+                }
+            });
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            initThreeJS();
+        };
+
+    </script>
+</body>
+</html>
