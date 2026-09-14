@@ -3,273 +3,559 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>현석쌤의 친절한 물리학 시뮬레이터</title>
+    <title>투명하고 친절한 물리학 시뮬레이터</title>
+    
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Jua&family=Pretendard:wght@400;600;800&display=swap');
-        
         body { 
             background-color: #f8fafc; 
-            font-family: 'Pretendard', sans-serif;
+            font-family: 'Noto Sans KR', sans-serif;
             word-break: keep-all;
         }
-        h1 { font-family: 'Jua', sans-serif; }
+        
+        h1, h2.brand-heading { 
+            font-family: 'Jua', sans-serif; 
+        }
         
         .glass-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .glass-card:hover {
             transform: translateY(-8px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.12), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             border-color: #3b82f6;
         }
 
         .gradient-text {
-            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            background: linear-gradient(135deg, #1e3a8a, #2563eb, #3b82f6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .category-label {
+        .category-badge {
             display: inline-block;
             padding: 0.25rem 0.75rem;
             border-radius: 9999px;
             font-size: 0.75rem;
             font-weight: 700;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
+
+        .search-input:focus {
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Smooth tab transition */
+        .filter-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
     </style>
 </head>
-<body class="min-h-screen bg-slate-50">
+<body class="min-h-screen text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-700">
 
-    <div class="max-w-6xl mx-auto px-6 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        
         <!-- 헤더 섹션 -->
-        <header class="text-center mb-16">
-            <h1 class="text-5xl md:text-6xl mb-4 gradient-text">현석쌤의 친절한 물리</h1>
-            <p class="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
-                과학/공학/수학 관련 흥미롭거나 수업에 활용할 수 있는 인터렉티브 시뮬레이션 자료를 제작합니다.
-            </p>
-            
-            <div class="mt-8 inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-100 rounded-full text-blue-700 text-sm font-semibold">
-                <span class="relative flex h-2 w-2 mr-2">
+        <header class="text-center mb-12">
+            <div class="inline-flex items-center px-4 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-blue-700 text-xs sm:text-sm font-semibold mb-6 shadow-sm">
+                <span class="relative flex h-2.5 w-2.5 mr-2.5">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
                 </span>
-                제작자: 김현석
+                제작자: 김현석 선생님 (물리 & 공학 시뮬레이션)
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl md:text-7xl mb-4 gradient-text tracking-tight font-extrabold">
+                현석쌤의 친절한 물리
+            </h1>
+            
+            <p class="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed font-normal">
+                과학, 공학, 수학의 핵심 원리를 직접 조작하고 체험할 수 있는 인터렉티브 시뮬레이션 플랫폼입니다.
+            </p>
+
+            <!-- 검색 및 카테고리 필터 컨트롤 -->
+            <div class="mt-8 max-w-xl mx-auto space-y-4">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="searchInput"
+                        placeholder="시뮬레이터 검색 (예: 상대성, CT, 뉴런, AI...)" 
+                        class="search-input w-full px-5 py-3.5 pl-12 rounded-2xl bg-white border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none transition duration-200 shadow-sm text-sm sm:text-base"
+                    />
+                    <svg class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+
+                <!-- 카테고리 필터 버튼 -->
+                <div class="flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm pt-2" id="filterContainer">
+                    <button class="filter-btn active px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 font-medium transition" data-filter="all">전체보기</button>
+                    <button class="filter-btn px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 font-medium transition" data-filter="mechanics">기초 역학/상대성</button>
+                    <button class="filter-btn px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 font-medium transition" data-filter="medical">응용/의료공학</button>
+                    <button class="filter-btn px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 font-medium transition" data-filter="complex">복잡계/생물학</button>
+                    <button class="filter-btn px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 font-medium transition" data-filter="ai">데이터/AI</button>
+                </div>
             </div>
         </header>
 
-        <!-- 그리드 레이아웃 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- 카드로 구성된 메인 그리드 영역 -->
+        <main class="space-y-12" id="cardGrid">
             
-            <!-- [1행] 기초 역학 계열 -->
-            <div class="lg:col-span-3">
-                <h2 class="text-lg font-bold text-slate-400 mb-4 flex items-center gap-2">
-                    <span class="w-8 h-[1px] bg-slate-300"></span> 기초 역학 및 운동 법칙
-                </h2>
-            </div>
+            <!-- [1행] 기초 역학 및 현대 물리학 -->
+            <section class="category-section" data-category="mechanics">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-blue-100 text-blue-700 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800 tracking-tight">기초 역학 및 상대성 이론</h2>
+                    <span class="text-xs px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full font-semibold">3개 모듈</span>
+                </div>
 
-            <!-- 1. 포물선 충돌 시뮬레이터 -->
-            <a href="bird_simulator.html" class="glass-card group p-8 rounded-3xl block border-red-50">
-                <span class="category-label bg-red-100 text-red-600">Dynamics</span>
-                <div class="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-red-200">
-                    <span class="text-2xl">🚀</span>
-                </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">포물선 대격돌<br><span class="text-sm font-medium text-red-500 uppercase tracking-widest">Physics Dynamics</span></h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    발사각과 지연 시간을 조절하여 두 물체의 궤적 충돌을 실험하는 물리 역학 시뮬레이션입니다.
-                </p>
-                <div class="flex items-center text-blue-600 font-bold text-sm">
-                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
-                </div>
-            </a>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- 1. 포물선 충돌 시뮬레이터 -->
+                    <a href="bird_simulator.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="포물선 충돌 발사체 역학 physics dynamics">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-red-100 text-red-700">Dynamics</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-01</span>
+                            </div>
+                            <div class="w-12 h-12 bg-red-500 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-red-200 text-white text-2xl">
+                                🚀
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                포물선 대격돌
+                            </h3>
+                            <p class="text-xs font-semibold text-red-500 uppercase tracking-wider mb-3">Physics Dynamics</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                발사각과 지연 시간을 조절하여 두 물체의 궤적 충돌을 실시간으로 실험하는 물리 역학 시뮬레이션입니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
 
-            <!-- 1-2. 방공망 요격 시뮬레이터 -->
-            <a href="air_defense.html" class="glass-card group p-8 rounded-3xl block border-blue-50">
-                <span class="category-label bg-slate-800 text-white">Defense Tech</span>
-                <div class="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-slate-300">
-                    <span class="text-2xl text-white">🛡️</span>
+                    <!-- 2. 방공망 요격 시뮬레이터 -->
+                    <a href="air_defense.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="방공망 요격 미사일 궤적 방어 defense missile">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-slate-800 text-white">Defense Tech</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-02</span>
+                            </div>
+                            <div class="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-slate-300 text-white text-2xl">
+                                🛡️
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                방공망 요격 분석
+                            </h3>
+                            <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Air Defense Lab</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                탄도 미사일의 궤적을 예측하고 요격 미사일의 발사 시점과 각도를 정밀하게 계산하여 방어하는 시뮬레이션입니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
+
+                    <!-- 3. 특수상대성이론 시뮬레이터 -->
+                    <a href="SRtheory_simulator.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="상대성 특수상대성 동시성 민코프스키 시간지연 relativity block universe">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-amber-100 text-amber-800">Special Relativity</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-03</span>
+                            </div>
+                            <div class="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-amber-200 text-white text-2xl">
+                                ⏱️
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                동시성과 시공간 상대성
+                            </h3>
+                            <p class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-3">Relativity & Block Universe</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                동시성의 상대성 실험과 민코프스키 도표, 4차원 블록 유니버스 시공간 모델을 시각적으로 탐구합니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
                 </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">방공망 요격 분석<br><span class="text-sm font-medium text-blue-800 uppercase tracking-widest">Air Defense Lab</span></h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    탄도 미사일의 궤적을 예측하고, 요격 미사일의 발사 시점과 각도를 계산하여 시설을 방어하는 시뮬레이션입니다.
-                </p>
-                <div class="flex items-center text-blue-600 font-bold text-sm">
-                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
-                </div>
-            </a>
+            </section>
 
             <!-- [2행] 응용 물리 및 의료 공학 계열 -->
-            <div class="lg:col-span-3 mt-8">
-                <h2 class="text-lg font-bold text-slate-400 mb-4 flex items-center gap-2">
-                    <span class="w-8 h-[1px] bg-slate-300"></span> 응용 물리 및 의료 영상 기술
-                </h2>
+            <section class="category-section" data-category="medical">
+                <div class="flex items-center gap-3 mb-6 pt-4">
+                    <div class="p-2 bg-indigo-100 text-indigo-700 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 002-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800 tracking-tight">응용 물리 및 의료 영상 기술</h2>
+                    <span class="text-xs px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full font-semibold">3개 모듈</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- 4. CT 영상분석 기초 -->
+                    <a href="CT_EDU_simulator.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="ct 의료 데이터 영상 분석 히트맵 medical ct image">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-blue-100 text-blue-700">Medical Data</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-04</span>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-blue-300 text-white text-2xl">
+                                🧬
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                CT 영상분석 기초
+                            </h3>
+                            <p class="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-3">Educational Tool</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                데이터 격자 분석과 히트맵 시각화를 통해 CT 이미지 데이터의 기본 구조와 행렬 처리를 학습합니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
+
+                    <!-- 5. CT 시뮬레이터 Pro -->
+                    <a href="CT_simulator.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="ct 라돈변환 역투영 재구성 의료영상 radon transform pro">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-slate-200 text-slate-800">Imaging Physics</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-05</span>
+                            </div>
+                            <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-slate-400 text-white text-2xl">
+                                📸
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                CT 전문 시뮬레이터
+                            </h3>
+                            <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-3">Professional Edition</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                라돈 변환(Radon Transform)과 필터 보정 역투영 원리를 직접 구동하여 단면을 영상화하는 정밀 시뮬레이터입니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
+
+                    <!-- 6. SPM 원리 학습 -->
+                    <a href="spm.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="spm 원자현미경 주사탐침 표면 3d 스캔 nano spm probe">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-cyan-100 text-cyan-800">Nano Physics</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-06</span>
+                            </div>
+                            <div class="w-12 h-12 bg-cyan-500 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-cyan-200 text-white text-2xl">
+                                🔬
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                SPM 원리 학습
+                            </h3>
+                            <p class="text-xs font-semibold text-cyan-600 uppercase tracking-wider mb-3">Scanning Probe</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                주사탐침현미경의 표면 스캔 피드백 원리를 탐구하고, 스캔 데이터를 다양한 3차원 그래프로 시각화합니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
+                </div>
+            </section>
+
+            <!-- [3행] 복잡계 및 생물리학 -->
+            <section class="category-section" data-category="complex">
+                <div class="flex items-center gap-3 mb-6 pt-4">
+                    <div class="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800 tracking-tight">복잡계 및 생물리학</h2>
+                    <span class="text-xs px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full font-semibold">3개 모듈</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- 7. 비첵 모델 시뮬레이터 -->
+                    <a href="vicsek_simulator.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="비첵 vicsek 군집 집단거동 창발 복잡계 swarm flocking">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-emerald-100 text-emerald-700">Complex Systems</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-07</span>
+                            </div>
+                            <div class="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-emerald-200 text-white text-2xl">
+                                🐟
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                생명체 군집 거동
+                            </h3>
+                            <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-3">Vicsek Model</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                개별 개체의 단순한 국소적 상호작용 규칙이 어떻게 집단 전체의 질서정연한 창발적 거동을 만드는지 관찰합니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
+
+                    <!-- 8. 뉴런 시뮬레이터 -->
+                    <a href="neuron_simulator.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="뉴런 신경 세포 활동전위 실무율 불응기 뇌 neuron biophysics">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-yellow-100 text-yellow-800">Biophysics</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-08</span>
+                            </div>
+                            <div class="w-12 h-12 bg-yellow-500 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-yellow-200 text-white text-2xl">
+                                🧠
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                뉴런 발화 시뮬레이터
+                            </h3>
+                            <p class="text-xs font-semibold text-yellow-600 uppercase tracking-wider mb-3">Action Potential</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                신경 세포의 자극 수용, 역치 전위 달성, 활동전위 생성 및 불응기 메커니즘을 시각적으로 구현합니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
+
+                    <!-- 9. SNN 자유 배치 실험 -->
+                    <a href="snn_free_editor.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="snn 스파이킹 신경망 시냅스 회로 연결 snn neural network">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-purple-100 text-purple-700">Neural Networks</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-09</span>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-purple-200 text-white text-2xl">
+                                ⚡
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                SNN 자유 배치 실험
+                            </h3>
+                            <p class="text-xs font-semibold text-purple-600 uppercase tracking-wider mb-3">Free Design Lab</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                스파이킹 뉴런과 시냅스를 캔버스에 자유롭게 배치하고 가중치를 조절하여 신경 회로 망을 직접 구성해봅니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
+                </div>
+            </section>
+
+            <!-- [4행] 데이터 과학 및 인공지능 알고리즘 -->
+            <section class="category-section" data-category="ai">
+                <div class="flex items-center gap-3 mb-6 pt-4">
+                    <div class="p-2 bg-purple-100 text-purple-700 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800 tracking-tight">데이터 과학 및 인공지능 알고리즘</h2>
+                    <span class="text-xs px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full font-semibold">3개 모듈</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- 10. XOR 딥러닝 학습기 -->
+                    <a href="ai_XOR.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="xor 역전파 오차 딥러닝 퍼셉트론 AI deep learning backpropagation">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-indigo-100 text-indigo-800">Deep Learning</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-10</span>
+                            </div>
+                            <div class="w-12 h-12 bg-indigo-700 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-indigo-300 text-white text-2xl">
+                                🤖
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                XOR 딥러닝 학습기
+                            </h3>
+                            <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-3">Backpropagation Lab</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                인공지능이 논리 XOR 문제를 해결하기 위해 경사하강법과 역전파로 가중치를 수험·학습하는 알고리즘을 확인합니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
+
+                    <!-- 11. AI 숫자 인식 과정 -->
+                    <a href="ai_MLP.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="숫자인식 mlp 다층퍼셉트론 필기체 인공지능 mnist mlp classification">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-indigo-600 text-white">Machine Learning</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-11</span>
+                            </div>
+                            <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-indigo-200 text-white text-2xl">
+                                🔢
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                AI 손글씨 숫자 인식
+                            </h3>
+                            <p class="text-xs font-semibold text-indigo-500 uppercase tracking-wider mb-3">MLP Visualization</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                사용자가 직접 그린 숫자를 픽셀 입력층부터 은닉층, 출력층의 확률값 분류까지 신경망을 추적합니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
+
+                    <!-- 12. 취향 분석 알고리즘 체험 -->
+                    <a href="preference_engine.html" class="sim-card glass-card group p-7 rounded-3xl block flex flex-col justify-between" data-tags="취향분석 코사인유사도 추천시스템 알고리즘 행렬 recommendation engine">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="category-badge bg-indigo-100 text-indigo-700">Recommendation</span>
+                                <span class="text-xs font-mono text-slate-400">MOD-12</span>
+                            </div>
+                            <div class="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md shadow-indigo-200 text-white text-2xl">
+                                📊
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                                취향 분석 알고리즘
+                            </h3>
+                            <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-3">Similarity Matrix</p>
+                            <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                                벡터 간 코사인 유사도 및 벡터 거리를 기반으로 데이터 추천 시스템이 개인별 취향을 추론하는 로직을 관찰합니다.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-blue-600 font-bold text-xs sm:text-sm">
+                            <span>실험 시작하기</span>
+                            <span class="group-hover:translate-x-1.5 transition-transform">→</span>
+                        </div>
+                    </a>
+                </div>
+            </section>
+
+            <!-- 검색 결과 없음 메시지 -->
+            <div id="noResults" class="hidden text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
+                <div class="text-4xl mb-3">🔍</div>
+                <h3 class="text-lg font-bold text-slate-700">검색 결과가 없습니다</h3>
+                <p class="text-slate-400 text-sm mt-1">다른 검색어를 입력하시거나 카테고리 필터를 변경해 보세요.</p>
             </div>
+        </main>
 
-            <!-- 2. CT 영상분석 시뮬레이터 (Education) -->
-            <a href="CT_EDU_simulator.html" class="glass-card group p-8 rounded-3xl block border-blue-50">
-                <span class="category-label bg-blue-100 text-blue-600">Medical Data</span>
-                <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-blue-300">
-                    <span class="text-2xl text-white">🧬</span>
+        <!-- 푸터 섹션 -->
+        <footer class="mt-24 pt-8 border-t border-slate-200 text-center text-slate-500 text-xs sm:text-sm">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 max-w-7xl mx-auto px-2">
+                <div class="text-left">
+                    <p class="font-bold text-slate-700">현석쌤의 친절한 물리</p>
+                    <p class="mt-0.5 text-slate-400 text-xs">interactive Physics & STEM Learning Laboratory</p>
                 </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">CT 영상분석 기초<br><span class="text-sm font-medium text-blue-500 uppercase tracking-widest">Educational Tool</span></h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    데이터 격자 분석과 히트맵을 통해 CT 이미지 데이터의 구조를 학습하는 교육용 도구입니다.
-                </p>
-                <div class="flex items-center text-blue-600 font-bold text-sm">
-                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
+                <div class="text-right sm:text-right text-center">
+                    <p>© 2026. <span class="font-semibold text-slate-700">김현석</span>. All rights reserved.</p>
+                    <p class="mt-0.5">Contact: <a href="mailto:tragowl@onedu.jje.go.kr" class="text-blue-500 hover:underline font-medium">tragowl@onedu.jje.go.kr</a></p>
                 </div>
-            </a>
-
-            <!-- 3. CT 시뮬레이터 (Professional) -->
-            <a href="CT_simulator.html" class="glass-card group p-8 rounded-3xl block border-slate-50">
-                <span class="category-label bg-slate-200 text-slate-700">Imaging Physics</span>
-                <div class="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-slate-300">
-                    <span class="text-2xl text-white">📸</span>
-                </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">CT 시뮬레이터<br><span class="text-sm font-medium text-blue-600 uppercase tracking-widest">Professional Edition</span></h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    라돈 변환과 필터 보정 역투영 원리를 이용한 정밀 의료 영상 재구성 시뮬레이션입니다.
-                </p>
-                <div class="flex items-center text-blue-600 font-bold text-sm">
-                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
-                </div>
-            </a>
-
-            <!-- 새로 추가된 SPM 원리 학습 시뮬레이터 -->
-            <a href="spm.html" class="glass-card group p-8 rounded-3xl block border-cyan-50">
-                <span class="category-label bg-cyan-100 text-cyan-700">Nano Physics</span>
-                <div class="w-14 h-14 bg-cyan-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-cyan-200">
-                    <span class="text-2xl text-white">🔬</span>
-                </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">SPM 원리 학습<br><span class="text-sm font-medium text-cyan-600 uppercase tracking-widest">Scanning Probe</span></h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    주사탐침현미경의 표면 스캔 피드백 원리를 체험하고, 측정된 디지털 데이터를 다양한 3차원 플롯으로 시각화합니다.
-                </p>
-                <div class="flex items-center text-blue-600 font-bold text-sm">
-                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
-                </div>
-            </a>
-
-            <!-- [3행] 복잡계 및 생명 물리 계열 -->
-            <div class="lg:col-span-3 mt-8">
-                <h2 class="text-lg font-bold text-slate-400 mb-4 flex items-center gap-2">
-                    <span class="w-8 h-[1px] bg-slate-300"></span> 복잡계 및 생물리학
-                </h2>
             </div>
-
-            <!-- 4. 비첵 모델 시뮬레이터 -->
-            <a href="vicsek_simulator.html" class="glass-card group p-8 rounded-3xl block border-emerald-50">
-                <span class="category-label bg-emerald-100 text-emerald-600">Complex Systems</span>
-                <div class="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-emerald-200">
-                    <span class="text-2xl text-white">🐟</span>
-                </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">생명체 군집 거동<br><span class="text-sm font-medium text-emerald-600 uppercase tracking-widest">Vicsek Model</span></h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    비첵 모델을 활용하여 국소적 규칙에 의한 군집의 창발적 특성 발현을 시뮬레이션합니다.
-                </p>
-                <div class="flex items-center text-blue-600 font-bold text-sm">
-                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
-                </div>
-            </a>
-
-            <!-- 5. 뉴런 시뮬레이터 -->
-            <a href="neuron_simulator.html" class="glass-card group p-8 rounded-3xl block border-yellow-50">
-                <span class="category-label bg-yellow-100 text-yellow-600">Biophysics</span>
-                <div class="w-14 h-14 bg-yellow-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-yellow-200">
-                    <span class="text-2xl">🧠</span>
-                </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">뉴런 시뮬레이터<br><span class="text-sm font-medium text-yellow-600 uppercase tracking-widest">Action Potential</span></h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    신경 세포의 역치 전위와 실무율, 불응기 원리를 인터렉티브하게 탐구하는 생물 물리 도구입니다.
-                </p>
-                <div class="flex items-center text-blue-600 font-bold text-sm">
-                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
-                </div>
-            </a>
-
-            <!-- 6. SNN 자유 배치 실험 -->
-            <a href="snn_free_editor.html" class="glass-card group p-8 rounded-3xl block border-purple-50">
-                <span class="category-label bg-purple-100 text-purple-600">Neural Networks</span>
-                <div class="w-14 h-14 bg-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-purple-200">
-                    <span class="text-2xl text-white">⚡</span>
-                </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">SNN 자유 배치 실험<br><span class="text-sm font-medium text-purple-600 uppercase tracking-widest">Free Design Lab</span></h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    스파이킹 뉴런과 시냅스를 캔버스에 자유롭게 배치하고 연결하여 인공 신경망의 신호 전달을 시뮬레이션합니다.
-                </p>
-                <div class="flex items-center text-blue-600 font-bold text-sm">
-                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
-                </div>
-            </a>
-
-            <!-- [4행] 데이터 과학 및 알고리즘 계열 -->
-            <div class="lg:col-span-3 mt-8">
-                <h2 class="text-lg font-bold text-slate-400 mb-4 flex items-center gap-2">
-                    <span class="w-8 h-[1px] bg-slate-300"></span> 데이터 과학 및 인공지능 알고리즘
-                </h2>
-            </div>
-
-            <!-- 7. XOR 딥러닝 학습기 (순서 조정됨: 1순위) -->
-            <a href="ai_XOR.html" class="glass-card group p-8 rounded-3xl block border-indigo-50">
-                <span class="category-label bg-indigo-50 text-indigo-700">Deep Learning</span>
-                <div class="w-14 h-14 bg-indigo-700 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-indigo-300">
-                    <span class="text-2xl text-white">🤖</span>
-                </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">XOR 딥러닝 학습기<br><span class="text-sm font-medium text-indigo-500 uppercase tracking-widest">Backpropagation Lab</span></h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    인공지능이 오차를 역전파하며 가중치를 최적화하는 딥러닝의 핵심 과정을 시각적으로 탐구합니다.
-                </p>
-                <div class="flex items-center text-blue-600 font-bold text-sm">
-                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
-                </div>
-            </a>
-
-            <!-- 8. AI 숫자 인식 과정 (순서 조정됨: 2순위) -->
-            <a href="ai_MLP.html" class="glass-card group p-8 rounded-3xl block border-indigo-50">
-                <span class="category-label bg-indigo-600 text-white">Machine Learning</span>
-                <div class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-indigo-200">
-                    <span class="text-2xl text-white">🔢</span>
-                </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">AI 숫자 인식 과정<br><span class="text-sm font-medium text-indigo-500 uppercase tracking-widest">MLP Visualization</span></h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    사용자가 그린 숫자를 디지털 데이터로 변환하고, 다층 퍼셉트론(MLP) 신경망을 통과하며 분류되는 전 과정을 시각화합니다.
-                </p>
-                <div class="flex items-center text-blue-600 font-bold text-sm">
-                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
-                </div>
-            </a>
-
-            <!-- 9. 취향 분석 알고리즘 체험 (순서 조정됨: 3순위) -->
-            <a href="preference_engine.html" class="glass-card group p-8 rounded-3xl block border-indigo-50">
-                <span class="category-label bg-indigo-100 text-indigo-600">Recommendation System</span>
-                <div class="w-14 h-14 bg-indigo-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-indigo-200">
-                    <span class="text-2xl text-white">📊</span>
-                </div>
-                <h3 class="text-2xl font-extrabold text-slate-800 mb-3 leading-tight">취향 분석 알고리즘<br><span class="text-sm font-medium text-indigo-600 uppercase tracking-widest">Similarity Matrix</span></h3>
-                <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                    행렬 유사도 분석을 통해 사용자 간의 취향 거리를 계산하고, 알고리즘 로직에 따른 추천 변화를 탐구합니다.
-                </p>
-                <div class="flex items-center text-blue-600 font-bold text-sm">
-                    입장하기 <span class="ml-2 group-hover:translate-x-2 transition-transform">→</span>
-                </div>
-            </a>
-
-        </div>
-
-        <!-- 푸터 -->
-        <footer class="mt-24 pt-8 border-t border-slate-200 text-center text-slate-400 text-sm">
-            <p>© 2026. 김현석. All rights reserved.</p>
-            <p class="mt-2">Contact: <a href="mailto:tragowl@onedu.jje.go.kr" class="text-blue-400 hover:underline">tragowl@onedu.jje.go.kr</a></p>
-            <p class="mt-4 text-xs font-light">본 페이지의 모든 시뮬레이터는 교육적 목적의 탐구 활동을 지원하기 위해 설계되었습니다.</p>
+            <p class="mt-8 text-slate-400 text-xs font-light">
+                본 페이지의 모든 시뮬레이터는 중·고등학교 및 대학교 과학 탐구 활동을 지원하기 위해 제작된 정밀 알고리즘 기반 웹 도구입니다.
+            </p>
         </footer>
     </div>
 
+    <!-- JavaScript: 검색 및 실시간 필터링 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            const cards = document.querySelectorAll('.sim-card');
+            const sections = document.querySelectorAll('.category-section');
+            const noResults = document.getElementById('noResults');
+
+            let currentFilter = 'all';
+
+            // 필터링 및 검색 적용 함수
+            function filterSimulators() {
+                const query = searchInput.value.trim().toLowerCase();
+                let visibleCardsCount = 0;
+
+                sections.forEach(section => {
+                    const sectionCategory = section.getAttribute('data-category');
+                    const sectionCards = section.querySelectorAll('.sim-card');
+                    let visibleInSection = 0;
+
+                    sectionCards.forEach(card => {
+                        const tags = card.getAttribute('data-tags').toLowerCase();
+                        const textContent = card.textContent.toLowerCase();
+                        
+                        const matchesFilter = (currentFilter === 'all' || sectionCategory === currentFilter);
+                        const matchesSearch = query === '' || tags.includes(query) || textContent.includes(query);
+
+                        if (matchesFilter && matchesSearch) {
+                            card.classList.remove('hidden');
+                            visibleInSection++;
+                            visibleCardsCount++;
+                        } else {
+                            card.classList.add('hidden');
+                        }
+                    });
+
+                    // 섹션 내 노출 카드가 하나도 없으면 섹션 제목 전체 숨김
+                    if (visibleInSection > 0) {
+                        section.classList.remove('hidden');
+                    } else {
+                        section.classList.add('hidden');
+                    }
+                });
+
+                // 전체 검색 결과가 없을 경우 메시지 표시
+                if (visibleCardsCount === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                }
+            }
+
+            // 검색어 입력 이벤트
+            searchInput.addEventListener('input', filterSimulators);
+
+            // 카테고리 필터 버튼 클릭 이벤트
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.getAttribute('data-filter');
+                    filterSimulators();
+                });
+            });
+        });
+    </script>
 </body>
 </html>
