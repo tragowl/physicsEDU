@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>동시성의 상대성 & 블록 유니버스 시뮬레이터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@300;400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0b0f19;
+            color: white;
+            user-select: none;
+            overflow-x: hidden;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        h1, h2, h3, .title-font, button {
+            font-family: 'Jua', sans-serif;
+        }
+        .mono-font { font-family: 'Roboto Mono', monospace; }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 1480px;
+            height: 100%;
+            max-height: 860px;
+            aspect-ratio: 16 / 9;
+            background-color: #020617;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 22px;
+            width: 22px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -7px;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        /* Modals and Overlays */
+        .modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 15, 25, 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 50;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .btn-toggle {
+            transition: all 0.2s;
+        }
+        .btn-toggle:not(.active-view) {
+            opacity: 0.5;
+            filter: grayscale(0.8);
+            transform: scale(0.95);
+        }
+        .active-view {
+            box-shadow: 0 0 15px currentColor;
+            transform: scale(1.03);
+            z-index: 10;
+        }
+
+        .phase-tab {
+            transition: all 0.25s ease;
+        }
+        .phase-tab.active-phase {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
+            border-color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+
+<div class="video-container border-4 border-slate-700" id="app-container">
+    
+    <!-- Top Header Navigation Bar -->
+    <header class="top-0 left-0 w-full p-3 bg-slate-900/90 border-b border-slate-800 z-20 flex justify-between items-center px-6">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl text-yellow-400 drop-shadow-md">
+                🚀 동시성 & 시공간 상대성 실험실
+            </h1>
+            <!-- Phase Switcher Tabs -->
+            <div class="flex gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                <button id="tab-phase1" class="phase-tab active-phase px-4 py-2 rounded-lg title-font text-lg border border-transparent">
+                    Phase 1: 동시성의 상대성 (10km 우주선)
+                </button>
+                <button id="tab-phase2" class="phase-tab px-4 py-2 bg-slate-800 text-slate-400 hover:text-white rounded-lg title-font text-lg border border-slate-700">
+                    Phase 2: 과거·현재·미래 & 블록 유니버스 ✨
+                </button>
+            </div>
+        </div>
+
+        <!-- Observer Status Indicator -->
+        <div id="status-badge" class="bg-blue-600 text-white px-4 py-1.5 rounded-xl text-lg title-font shadow-lg border border-blue-400">
+            파랑이 관점 (외부 관성계)
+        </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- PHASE 1 VIEW CONTAINER -->
+    <!-- ========================================== -->
+    <div id="phase1-container" class="flex-1 relative w-full h-full flex flex-col overflow-hidden">
+        <div class="flex-1 relative w-full h-full">
+            <canvas id="simCanvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+            
+            <!-- Dynamic Event Overlays for Phase 1 -->
+            <div id="event-overlay-a" class="absolute hidden flex-col items-center justify-center z-10 pointer-events-none transform -translate-x-1/2 -translate-y-1/2">
+                <div class="text-red-500 text-6xl drop-shadow-[0_0_10px_rgba(239,68,68,1)] title-font">💥</div>
+                <div class="bg-red-600/90 text-white px-3 py-1 rounded-full title-font text-lg mt-1 border border-red-300">A 피격</div>
+            </div>
+            <div id="event-overlay-b" class="absolute hidden flex-col items-center justify-center z-10 pointer-events-none transform -translate-x-1/2 -translate-y-1/2">
+                <div class="text-blue-500 text-6xl drop-shadow-[0_0_10px_rgba(59,130,246,1)] title-font">💥</div>
+                <div class="bg-blue-600/90 text-white px-3 py-1 rounded-full title-font text-lg mt-1 border border-blue-300">B 피격</div>
+            </div>
+            <div id="event-overlay-center" class="absolute hidden flex-col items-center justify-center z-10 pointer-events-none transform -translate-x-1/2 -translate-y-1/2">
+                <div class="text-yellow-400 text-5xl drop-shadow-[0_0_10px_rgba(250,204,21,1)] title-font">❗</div>
+                <div class="bg-yellow-500/90 text-black px-3 py-1 rounded-full title-font text-lg mt-1 border border-yellow-200">죽음 인지</div>
+            </div>
+        </div>
+
+        <!-- Bottom Control Bar Phase 1 -->
+        <div class="bg-slate-900 border-t border-slate-700 p-4 z-20 flex justify-between items-center gap-4 shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
+            <div class="flex gap-3 bg-slate-800 p-2 rounded-2xl border border-slate-600">
+                <button id="btn-view-red" class="btn-toggle px-4 py-3 bg-red-600 text-white rounded-xl title-font text-2xl border-2 border-red-400">
+                    🔴 빨강이 관점
+                </button>
+                <button id="btn-view-blue" class="btn-toggle active-view px-4 py-3 bg-blue-600 text-white rounded-xl title-font text-2xl border-2 border-blue-400">
+                    🔵 파랑이 관점
+                </button>
+            </div>
+
+            <!-- Toggle Celestial Objects (Earth & Dragon) Button -->
+            <button id="btn-toggle-celestial" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl title-font text-xl border-2 border-slate-600 transition flex items-center gap-2">
+                <span>🌍 지구 & 🐉 녹색이 표시</span>
+                <span id="celestial-status-tag" class="text-sm bg-slate-900 px-2 py-0.5 rounded border border-slate-700 text-slate-400">OFF</span>
+            </button>
+
+            <!-- Speed Control Slider -->
+            <div class="flex flex-col flex-1 max-w-xs bg-slate-800 p-3 rounded-xl border border-slate-600">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="title-font text-xl text-slate-300">우주선 속도 (v)</label>
+                    <span id="speed-display" class="font-mono text-xl font-bold text-yellow-400 bg-black px-3 py-1 rounded">0.50 c</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-mono text-slate-400">0</span>
+                    <input type="range" id="speed-slider" min="0" max="0.50" step="0.01" value="0.5">
+                    <span class="text-sm font-mono text-slate-400">0.50c</span>
+                </div>
+            </div>
+
+            <!-- Fire & Reset Action Buttons -->
+            <div class="flex gap-3">
+                <button id="btn-fire" class="px-6 py-4 bg-gradient-to-b from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-black font-bold rounded-xl title-font text-3xl shadow-[0_0_15px_rgba(245,158,11,0.5)] transition transform active:scale-95">
+                    ⚡ 발사!
+                </button>
+                <button id="btn-reset" class="px-4 py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl title-font text-2xl transition shadow-lg border border-slate-500">
+                    🔄 초기화
+                </button>
+            </div>
+
+            <!-- Informational Modal Triggers -->
+            <div class="flex flex-col gap-2">
+                <button id="btn-show-data" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg title-font text-lg border border-emerald-500 transition">
+                    📊 물리량 정보
+                </button>
+                <button id="btn-show-minkowski" class="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-lg title-font text-lg border border-purple-500 transition">
+                    📈 시공간 도표
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- PHASE 2 VIEW CONTAINER -->
+    <!-- ========================================== -->
+    <div id="phase2-container" class="flex-1 relative w-full h-full flex flex-col hidden overflow-hidden bg-slate-950">
+        
+        <!-- Header Controls for Phase 2 -->
+        <div class="bg-slate-900 border-b border-slate-800 px-6 py-2.5 flex justify-between items-center gap-4">
+            <div class="flex items-center gap-2 bg-purple-950/80 px-4 py-1.5 rounded-xl border border-purple-600/50 shadow">
+                <span class="text-xl">🧊</span>
+                <span class="title-font text-lg text-purple-200">블록 유니버스 (4D 시공간)</span>
+            </div>
+
+            <!-- Observer Selector -->
+            <div class="flex gap-2 items-center bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                <button id="p2-btn-red" class="btn-toggle px-3 py-1.5 bg-red-600 text-white rounded-lg title-font text-base border border-red-400">
+                    🔴 빨강이 관점 (우주선 정지계)
+                </button>
+                <button id="p2-btn-blue" class="btn-toggle active-view px-3 py-1.5 bg-blue-600 text-white rounded-lg title-font text-base border border-blue-400">
+                    🔵 파랑이 관점 (외부/지구 정지계)
+                </button>
+            </div>
+
+            <!-- Speed Control Slider for Phase 2 -->
+            <div class="flex items-center gap-3 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
+                <span class="title-font text-slate-300 text-sm">속도 v:</span>
+                <input type="range" id="p2-speed-slider" min="0" max="0.50" step="0.01" value="0.5" class="w-28">
+                <span id="p2-speed-disp" class="mono-font text-yellow-400 text-sm font-bold w-12">0.50c</span>
+            </div>
+
+            <!-- Time Scrubber Slider -->
+            <div class="flex items-center gap-3 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
+                <span class="title-font text-slate-300 text-sm" id="p2-time-label">시간 (t):</span>
+                <input type="range" id="p2-time-slider" min="-25" max="35" step="0.2" value="5" class="w-36">
+                <span id="p2-time-disp" class="mono-font text-emerald-400 text-sm font-bold w-16">5.00 μs</span>
+            </div>
+        </div>
+
+        <!-- Canvas for 4D Block Universe Rendering -->
+        <div class="flex-1 relative w-full h-full overflow-hidden">
+            <canvas id="p2BlockCanvas" class="absolute inset-0 w-full h-full bg-slate-950"></canvas>
+        </div>
+
+        <!-- Physics Banner -->
+        <div id="p2-edu-banner" class="bg-slate-900 border-t border-slate-800 p-3 px-6 z-20 flex justify-between items-center text-sm shadow-xl">
+            <div class="flex items-center gap-3">
+                <span class="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 px-3 py-1 rounded-full title-font text-base">
+                    💡 핵심 물리 인사이트
+                </span>
+                <p id="p2-banner-text" class="text-slate-200 title-font text-base">
+                    파랑이 관점에서는 A와 B의 피격 사건을 잇는 직선이 기울어져 있으며, 지구의 먼 과거와 녹색이의 먼 미래와 만납니다!
+                </p>
+            </div>
+            <div class="flex gap-4 mono-font text-xs text-slate-400">
+                <div>로런츠 인자 γ = <span id="p2-val-gamma" class="text-yellow-400 font-bold">1.155</span></div>
+                <div>A-B 피격 기울기 = <span id="p2-val-slope" class="text-cyan-400 font-bold">v/c = 0.500</span></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 📊 Physics Data Modal (Phase 1) -->
+    <div id="modal-data" class="modal-overlay">
+        <div class="bg-slate-800 p-8 rounded-2xl border border-slate-600 shadow-2xl min-w-[400px] relative">
+            <button class="close-modal absolute top-4 right-6 text-4xl text-slate-400 hover:text-white">&times;</button>
+            <h2 class="title-font text-3xl text-emerald-400 mb-6 border-b border-slate-600 pb-2">📊 상대론적 물리량 상세 정보</h2>
+            
+            <div class="mono-font text-lg flex flex-col gap-3">
+                <div class="flex justify-between bg-slate-900 p-2 rounded"><span>속도 v :</span> <span id="val-v" class="text-blue-400 font-bold">0.50 c</span></div>
+                <div class="flex justify-between bg-slate-900 p-2 rounded"><span>로런츠 인자 γ :</span> <span id="val-gamma" class="text-yellow-400 font-bold">1.155</span></div>
+                <div class="flex justify-between bg-slate-900 p-2 rounded"><span class="text-cyan-400">우주선 관측 길이 (L') :</span> <span id="val-ship-len" class="text-cyan-300 font-bold">8.66 km</span></div>
+                <hr class="border-slate-600 my-2">
+                <div class="text-sm text-slate-400 mb-1">현재 선택된 관점 기준 시간 (발사 = 0.00 μs)</div>
+                <div class="flex justify-between bg-slate-900 p-2 rounded"><span class="text-red-400">A 피격 시간 (t_A) :</span> <span id="val-ta" class="font-bold">--</span></div>
+                <div class="flex justify-between bg-slate-900 p-2 rounded"><span class="text-blue-400">B 피격 시간 (t_B) :</span> <span id="val-tb" class="font-bold">--</span></div>
+                <div class="flex justify-between bg-slate-900 p-2 rounded border border-yellow-500/30 mt-2"><span class="text-yellow-400 font-bold">시간 차이 (Δt) :</span> <span id="val-dt" class="font-bold text-xl text-yellow-300">0.00 μs</span></div>
+                <div class="flex justify-between bg-slate-900 p-2 rounded mt-2"><span class="text-purple-400">사망 정보 도달 (t_ret) :</span> <span id="val-tret" class="font-bold text-lg">--</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📈 Minkowski Diagram Modal (Phase 1) -->
+    <div id="modal-minkowski" class="modal-overlay p-4 sm:p-6">
+        <div class="w-full h-full max-w-[96vw] max-h-[92vh] bg-slate-900 rounded-2xl border border-slate-600 shadow-2xl flex flex-col overflow-hidden relative">
+            <div class="flex justify-between items-center px-6 py-3.5 border-b border-slate-700 bg-slate-800 shrink-0">
+                <h2 class="title-font text-2xl sm:text-3xl text-purple-400">📈 시공간 도표 (Minkowski Diagram - Phase 1)</h2>
+                <div class="flex gap-4 items-center">
+                    <span class="text-slate-300 text-base sm:text-lg">현재 속도: <span id="mink-v-disp" class="font-mono text-yellow-400 font-bold">0.50c</span></span>
+                    <button class="close-modal text-3xl sm:text-4xl text-slate-400 hover:text-white leading-none">&times;</button>
+                </div>
+            </div>
+            
+            <div class="flex-1 flex gap-3 p-3 bg-black overflow-hidden">
+                <!-- Red Frame Diagram Canvas -->
+                <div class="flex-1 border border-red-500/80 rounded-xl relative overflow-hidden bg-slate-950">
+                    <div class="absolute top-3 left-3 bg-red-600/90 text-white px-3 py-1 rounded-lg title-font text-sm sm:text-base z-10 shadow border border-red-400">🔴 빨강이 관점 (우주선 정지계)</div>
+                    <canvas id="canvas-mink-red" class="w-full h-full"></canvas>
+                </div>
+                
+                <!-- Blue Frame Diagram Canvas -->
+                <div class="flex-1 border border-blue-500/80 rounded-xl relative overflow-hidden bg-slate-950">
+                    <div class="absolute top-3 left-3 bg-blue-600/90 text-white px-3 py-1 rounded-lg title-font text-sm sm:text-base z-10 shadow border border-blue-400">🔵 파랑이 관점 (외부 관성계)</div>
+                    <canvas id="canvas-mink-blue" class="w-full h-full"></canvas>
+                </div>
+            </div>
+            
+            <div id="minkowski-legend" class="p-3 bg-slate-800 text-center text-slate-300 title-font text-base sm:text-lg flex justify-center gap-4 sm:gap-6 flex-wrap shrink-0 border-t border-slate-700">
+                <span class="text-yellow-400">■ 광선 (발사 - 45° 기울기)</span>
+                <span class="text-cyan-400">■ 귀환 정보 (죽음 - 45° 기울기)</span>
+                <span class="text-green-400">■ 외계인 A/B 세계선</span>
+                <span class="text-white">■ 동시성의 선 (빨강이 기준)</span>
+                <span id="mink-legend-earth" class="text-blue-400 hidden">■ 지구 세계선 🌍</span>
+                <span id="mink-legend-dragon" class="text-emerald-400 hidden">■ 녹색이 세계선 🐉</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    /* Polyfill for roundRect to guarantee compatibility */
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+            if (typeof r === 'number') r = [r, r, r, r];
+            const [tl, tr, br, bl] = r;
+            this.beginPath();
+            this.moveTo(x + tl, y);
+            this.lineTo(x + w - tr, y);
+            this.quadraticCurveTo(x + w, y, x + w, y + tr);
+            this.lineTo(x + w, y + h - br);
+            this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+            this.lineTo(x + bl, y + h);
+            this.quadraticCurveTo(x, y + h, x, y + h - bl);
+            this.lineTo(x, y + tl);
+            this.quadraticCurveTo(x, y, x + tl, y);
+            this.closePath();
+            return this;
+        };
+    }
+
+    /* Core Constants & State */
+    const C = 1; 
+    const L = 10; // 우주선 고유 길이 (10km)
+    const TIME_MULTIPLIER = 3.33; // 표시용 마이크로초 환산 스케일
+
+    let activePhase = 1; 
+
+    let state = {
+        v: 0.50,
+        gamma: 1.155,
+        view: 'blue', 
+        status: 'idle', 
+        simTime: 0, 
+        showEarthDragon: false, 
+        events: {
+            A: { hit: false, t_red: 0, x_red: 0, t_blue: 0, x_blue: 0, hitScreenX: null, hitScreenY: null },
+            B: { hit: false, t_red: 0, x_red: 0, t_blue: 0, x_blue: 0, hitScreenX: null, hitScreenY: null },
+            Return: { received: false, t_red: 10, t_blue: 10, hitScreenX: null, hitScreenY: null }
+        }
+    };
+
+    function calculatePhysics() {
+        state.gamma = 1 / Math.sqrt(1 - state.v * state.v);
+        
+        // 빨강이 좌표계 (S')
+        const t_prime_A = L / 2; 
+        const x_prime_A = -L / 2; 
+        const t_prime_B = L / 2; 
+        const x_prime_B = L / 2; 
+        const t_prime_ret = 10;
+
+        state.events.A.t_red = t_prime_A;
+        state.events.A.x_red = x_prime_A;
+        state.events.B.t_red = t_prime_B;
+        state.events.B.x_red = x_prime_B;
+        state.events.Return.t_red = t_prime_ret;
+
+        // 로런츠 변환 (S)
+        state.events.A.t_blue = state.gamma * (t_prime_A + state.v * x_prime_A); 
+        state.events.A.x_blue = state.gamma * (x_prime_A + state.v * t_prime_A); 
+        
+        state.events.B.t_blue = state.gamma * (t_prime_B + state.v * x_prime_B); 
+        state.events.B.x_blue = state.gamma * (x_prime_B + state.v * t_prime_B); 
+        
+        state.events.Return.t_blue = state.gamma * (t_prime_ret + state.v * 0); 
+        state.events.Return.x_blue = state.gamma * (0 + state.v * t_prime_ret); 
+
+        updateDataPanel();
+        p2_calculatePhysics();
+    }
+
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    let animId;
+    let lastTime = 0;
+
+    function resizeCanvas() {
+        if(canvas && canvas.parentElement) {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        
+        p2_resizeCanvases();
+
+        if(activePhase === 1 && state.status === 'idle') drawSimulation();
+        if(activePhase === 2) p2_render();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function formatTime(t) { return (t * TIME_MULTIPLIER).toFixed(2) + " μs"; }
+
+    function updateDataPanel() {
+        document.getElementById('val-v').textContent = state.v.toFixed(2) + " c";
+        document.getElementById('val-gamma').textContent = state.gamma.toFixed(3);
+        document.getElementById('mink-v-disp').textContent = state.v.toFixed(2) + " c";
+        
+        const isRed = state.view === 'red';
+        const observedLength = isRed ? L : (L / state.gamma);
+        const shipLenEl = document.getElementById('val-ship-len');
+        if (shipLenEl) {
+            shipLenEl.textContent = `${observedLength.toFixed(2)} km ${isRed ? '(고유길이 L)' : '(길이수축 L/γ)'}`;
+        }
+
+        const tA = isRed ? state.events.A.t_red : state.events.A.t_blue;
+        const tB = isRed ? state.events.B.t_red : state.events.B.t_blue;
+        const tRet = isRed ? state.events.Return.t_red : state.events.Return.t_blue;
+        
+        document.getElementById('val-ta').textContent = formatTime(tA);
+        document.getElementById('val-tb').textContent = formatTime(tB);
+        document.getElementById('val-dt').textContent = formatTime(Math.abs(tB - tA));
+        document.getElementById('val-tret').textContent = formatTime(tRet);
+    }
+
+    /* Modals & UI Event Listeners */
+    document.getElementById('btn-show-data').addEventListener('click', () => {
+        document.getElementById('modal-data').classList.add('active');
+    });
+    document.getElementById('btn-show-minkowski').addEventListener('click', () => {
+        document.getElementById('modal-minkowski').classList.add('active');
+        drawMinkowski(); 
+    });
+    document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.target.closest('.modal-overlay').classList.remove('active');
+        });
+    });
+
+    const tabPhase1 = document.getElementById('tab-phase1');
+    const tabPhase2 = document.getElementById('tab-phase2');
+    const phase1Cont = document.getElementById('phase1-container');
+    const phase2Cont = document.getElementById('phase2-container');
+
+    tabPhase1.addEventListener('click', () => {
+        activePhase = 1;
+        tabPhase1.className = "phase-tab active-phase px-4 py-2 rounded-lg title-font text-lg border border-transparent";
+        tabPhase2.className = "phase-tab px-4 py-2 bg-slate-800 text-slate-400 hover:text-white rounded-lg title-font text-lg border border-slate-700";
+        phase1Cont.classList.remove('hidden');
+        phase2Cont.classList.add('hidden');
+        statusBadge.classList.remove('hidden');
+        setView(state.view);
+        resizeCanvas();
+    });
+
+    tabPhase2.addEventListener('click', () => {
+        activePhase = 2;
+        tabPhase2.className = "phase-tab active-phase px-4 py-2 rounded-lg title-font text-lg border border-transparent";
+        tabPhase1.className = "phase-tab px-4 py-2 bg-slate-800 text-slate-400 hover:text-white rounded-lg title-font text-lg border border-slate-700";
+        phase2Cont.classList.remove('hidden');
+        phase1Cont.classList.add('hidden');
+        statusBadge.classList.add('hidden');
+        p2_setView(p2State.view);
+        resizeCanvas();
+    });
+
+    const btnToggleCelestial = document.getElementById('btn-toggle-celestial');
+    const tagCelestialStatus = document.getElementById('celestial-status-tag');
+    
+    btnToggleCelestial.addEventListener('click', () => {
+        state.showEarthDragon = !state.showEarthDragon;
+        if (state.showEarthDragon) {
+            btnToggleCelestial.className = "px-4 py-3 bg-emerald-900/60 hover:bg-emerald-800/80 text-emerald-200 rounded-xl title-font text-xl border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.4)] transition flex items-center gap-2";
+            tagCelestialStatus.textContent = "ON";
+            tagCelestialStatus.className = "text-sm bg-emerald-500 text-black font-bold px-2 py-0.5 rounded border border-emerald-300";
+            document.getElementById('mink-legend-earth').classList.remove('hidden');
+            document.getElementById('mink-legend-dragon').classList.remove('hidden');
+        } else {
+            btnToggleCelestial.className = "px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl title-font text-xl border-2 border-slate-600 transition flex items-center gap-2";
+            tagCelestialStatus.textContent = "OFF";
+            tagCelestialStatus.className = "text-sm bg-slate-900 px-2 py-0.5 rounded border border-slate-700 text-slate-400";
+            document.getElementById('mink-legend-earth').classList.add('hidden');
+            document.getElementById('mink-legend-dragon').classList.add('hidden');
+        }
+        drawSimulation();
+    });
+
+    const btnRed = document.getElementById('btn-view-red');
+    const btnBlue = document.getElementById('btn-view-blue');
+    const statusBadge = document.getElementById('status-badge');
+    
+    function setView(view) {
+        state.view = view;
+        if(view === 'red') {
+            btnRed.classList.add('active-view');
+            btnBlue.classList.remove('active-view');
+            statusBadge.textContent = '🔴 빨강이 관점 (우주선 내부)';
+            statusBadge.className = 'bg-red-600 text-white px-4 py-1.5 rounded-xl text-lg title-font shadow-lg border border-red-400';
+        } else {
+            btnBlue.classList.add('active-view');
+            btnRed.classList.remove('active-view');
+            statusBadge.textContent = '🔵 파랑이 관점 (외부 관성계)';
+            statusBadge.className = 'bg-blue-600 text-white px-4 py-1.5 rounded-xl text-lg title-font shadow-lg border border-blue-400';
+        }
+        updateDataPanel();
+        resetSim();
+    }
+    btnRed.addEventListener('click', () => setView('red'));
+    btnBlue.addEventListener('click', () => setView('blue'));
+
+    const sliderV = document.getElementById('speed-slider');
+    const displayV = document.getElementById('speed-display');
+    sliderV.addEventListener('input', (e) => {
+        state.v = parseFloat(e.target.value);
+        displayV.textContent = state.v.toFixed(2) + " c";
+        p2State.v = state.v;
+        document.getElementById('p2-speed-slider').value = state.v;
+        document.getElementById('p2-speed-disp').textContent = state.v.toFixed(2) + "c";
+        resetSim();
+    });
+
+    document.getElementById('btn-fire').addEventListener('click', () => {
+        if(state.status === 'idle') {
+            state.status = 'playing';
+            lastTime = performance.now();
+            if(!animId) loop(performance.now());
+        }
+    });
+    document.getElementById('btn-reset').addEventListener('click', resetSim);
+
+    function resetSim() {
+        state.status = 'idle';
+        state.simTime = 0;
+        state.events.A.hit = false;
+        state.events.B.hit = false;
+        state.events.A.hitScreenX = null;
+        state.events.A.hitScreenY = null;
+        state.events.B.hitScreenX = null;
+        state.events.B.hitScreenY = null;
+        state.events.Return.received = false;
+        state.events.Return.hitScreenX = null;
+        state.events.Return.hitScreenY = null;
+        
+        hideEventOverlays();
+        calculatePhysics();
+        drawSimulation();
+    }
+
+    function drawDragon(ctx, x, y, color, isLarge=false) {
+        ctx.save();
+        ctx.translate(x, y);
+        if(isLarge) ctx.scale(1.5, 1.5); 
+        
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-30, 10, -25, 25); ctx.quadraticCurveTo(-15, 15, 0, 15); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI*2); ctx.fill();
+        
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath(); ctx.moveTo(-8, -14); ctx.lineTo(-12, -26); ctx.lineTo(-2, -17); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(8, -14); ctx.lineTo(12, -26); ctx.lineTo(2, -17); ctx.fill();
+        
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.ellipse(0, 8, 14, 10, 0, 0, Math.PI*2); ctx.fill();
+        
+        ctx.fillStyle = 'white';
+        ctx.beginPath(); ctx.arc(-6, -4, 5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(6, -4, 5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'black';
+        ctx.beginPath(); ctx.arc(-6, -4, 2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(6, -4, 2, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+
+    function getEarthStageInfo(t) {
+        if (t < -15) return { icon: "🌋", label: "용암 바다", sub: "원시 지구" };
+        if (t < 0)   return { icon: "🌊", label: "원시 바다", sub: "단세포 생물" };
+        if (t < 12)  return { icon: "🦖", label: "공룡 시대", sub: "거대 공룡" };
+        if (t < 25)  return { icon: "🏛️", label: "인류 문명", sub: "고대 도시" };
+        return { icon: "🏙️", label: "미래 도시", sub: "첨단 문명" };
+    }
+
+    function getDragonStageInfo(t) {
+        if (t < -15) return { icon: "🥚", label: "드래곤 알", sub: "부화 전" };
+        if (t < 0)   return { icon: "🐣", label: "아기 드래곤", sub: "유년기" };
+        if (t < 12)  return { icon: "🐉", label: "성체 드래곤", sub: "전성기" };
+        if (t < 25)  return { icon: "👓🐉", label: "노년 드래곤", sub: "노년기" };
+        return { icon: "💀🐉", label: "별이 됨", sub: "전설 속으로" };
+    }
+
+    const stars = Array.from({length: 150}, () => ({
+        x: Math.random(), y: Math.random(), s: Math.random() * 2 + 1, a: Math.random()
+    }));
+
+    function drawSimulation() {
+        if(!canvas) return;
+        const W = canvas.width;
+        const H = canvas.height;
+        const cy = H / 2;
+        const laserY = cy - 35; 
+        const charY = cy + 25;  
+        ctx.clearRect(0, 0, W, H);
+
+        const t = state.simTime;
+        
+        let span, offsetX, pixelsPerKm;
+        if (state.showEarthDragon) {
+            span = 40; 
+            pixelsPerKm = (W * 0.85) / span;
+            offsetX = W / 2;
+        } else {
+            span = 22; 
+            pixelsPerKm = (W * 0.82) / span;
+            offsetX = W / 2;
+        }
+
+        // Starfield background
+        ctx.fillStyle = '#fff';
+        let starV = state.view === 'red' ? -state.v * 20 : 0;
+        stars.forEach(star => {
+            let sx = (star.x * W + starV * t * 10) % W;
+            if(sx < 0) sx += W;
+            ctx.globalAlpha = star.a * 0.8;
+            ctx.beginPath(); ctx.arc(sx, star.y * H, star.s, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.globalAlpha = 1.0;
+
+        let shipCenter, shipLeft, shipRight;
+        let tA = state.view === 'red' ? state.events.A.t_red : state.events.A.t_blue;
+        let tB = state.view === 'red' ? state.events.B.t_red : state.events.B.t_blue;
+        let tRet = state.view === 'red' ? state.events.Return.t_red : state.events.Return.t_blue;
+
+        if (state.view === 'red') {
+            shipCenter = 0; shipLeft = -5; shipRight = 5;
+        } else {
+            const L_obs = L / state.gamma;
+            shipCenter = state.v * t;
+            shipLeft = shipCenter - L_obs/2;
+            shipRight = shipCenter + L_obs/2;
+        }
+
+        /* Earth & Dragon rendering */
+        if (state.showEarthDragon) {
+            const xEarth_blue = -15.5;
+            const xDragon_blue = 15.5;
+
+            let xEarth, xDragon, tEarth, tDragon;
+
+            if (state.view === 'blue') {
+                xEarth = xEarth_blue;
+                xDragon = xDragon_blue;
+                tEarth = t;
+                tDragon = t;
+            } else {
+                xEarth = (xEarth_blue / state.gamma) - state.v * t;
+                xDragon = (xDragon_blue / state.gamma) - state.v * t;
+                tEarth = (t / state.gamma) + state.v * xEarth_blue;
+                tDragon = (t / state.gamma) + state.v * xDragon_blue;
+            }
+
+            const pxEarth = offsetX + xEarth * pixelsPerKm;
+            const pxDragon = offsetX + xDragon * pixelsPerKm;
+            const celestialY = cy - 20;
+
+            if (state.view === 'red') {
+                ctx.save();
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath(); ctx.moveTo(pxEarth, celestialY); ctx.lineTo(pxDragon, celestialY); ctx.stroke();
+                ctx.restore();
+            }
+
+            // Earth Body
+            const earthInfo = getEarthStageInfo(tEarth);
+            ctx.save();
+            ctx.fillStyle = '#1e3a8a';
+            ctx.beginPath(); ctx.arc(pxEarth, celestialY, 32, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 3; ctx.stroke();
+            
+            ctx.font = '32px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(earthInfo.icon, pxEarth, celestialY);
+
+            ctx.fillStyle = '#0f172a'; ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.roundRect(pxEarth - 60, celestialY + 40, 120, 38, 8); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#93c5fd'; ctx.font = 'bold 14px Jua'; ctx.textAlign = 'center';
+            ctx.fillText(`지구 (${earthInfo.label})`, pxEarth, celestialY + 54);
+            ctx.fillStyle = '#cbd5e1'; ctx.font = '11px Roboto Mono';
+            ctx.fillText(`t = ${tEarth.toFixed(1)} μs`, pxEarth, celestialY + 70);
+            ctx.restore();
+
+            // Dragon Star Body
+            const dragonInfo = getDragonStageInfo(tDragon);
+            ctx.save();
+            ctx.fillStyle = '#064e3b';
+            ctx.beginPath(); ctx.arc(pxDragon, celestialY, 32, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#10b981'; ctx.lineWidth = 3; ctx.stroke();
+            
+            ctx.font = '32px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(dragonInfo.icon, pxDragon, celestialY);
+
+            ctx.fillStyle = '#0f172a'; ctx.strokeStyle = '#10b981'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.roundRect(pxDragon - 65, celestialY + 40, 130, 38, 8); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#6ee7b7'; ctx.font = 'bold 14px Jua'; ctx.textAlign = 'center';
+            ctx.fillText(`녹색이 별 (${dragonInfo.label})`, pxDragon, celestialY + 54);
+            ctx.fillStyle = '#cbd5e1'; ctx.font = '11px Roboto Mono';
+            ctx.fillText(`t = ${tDragon.toFixed(1)} μs`, pxDragon, celestialY + 70);
+            ctx.restore();
+        }
+
+        let blueX = state.view === 'red' ? -state.v * t : 0;
+        const pxBlue = offsetX + blueX * pixelsPerKm;
+        drawDragon(ctx, pxBlue, H - 120, '#3b82f6', true);
+        
+        ctx.fillStyle = '#60a5fa'; ctx.font = '24px Jua'; ctx.textAlign = 'center';
+        ctx.fillText("파랑이", pxBlue, H - 40);
+        if(state.view === 'blue') ctx.fillText("📸 (관찰 기준)", pxBlue, H - 15);
+
+        const pxShipCenter = offsetX + shipCenter * pixelsPerKm;
+        const pxShipLeft = offsetX + shipLeft * pixelsPerKm;
+        const pxShipRight = offsetX + shipRight * pixelsPerKm;
+        const shipHeight = 120;
+        
+        if (state.view === 'blue' && t > 0) {
+            const L_obs = L / state.gamma;
+            const pxGhostCenter = offsetX; 
+            const pxGhostLeft = offsetX - (L_obs/2) * pixelsPerKm;
+            const pxGhostRight = offsetX + (L_obs/2) * pixelsPerKm;
+            
+            ctx.save();
+            ctx.globalAlpha = 0.25;
+            ctx.fillStyle = '#020617'; ctx.strokeStyle = '#64748b'; ctx.lineWidth = 2;
+            ctx.setLineDash([8, 8]); 
+            ctx.beginPath();
+            ctx.roundRect(pxGhostLeft, cy - shipHeight/2, pxGhostRight - pxGhostLeft, shipHeight, 20);
+            ctx.fill(); ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#94a3b8'; ctx.font = '20px Jua'; ctx.textAlign = 'center';
+            ctx.fillText("📍 발사 위치 (t=0)", pxGhostCenter, cy - shipHeight/2 - 15);
+            
+            ctx.font = '50px sans-serif'; ctx.textBaseline = 'middle';
+            ctx.fillText('👽', pxGhostLeft + 40, charY);
+            ctx.fillText('👽', pxGhostRight - 40, charY);
+            drawDragon(ctx, pxGhostCenter, charY, '#ef4444', false); 
+            ctx.restore();
+        }
+
+        // Spaceship Hull
+        ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#64748b'; ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.roundRect(pxShipLeft, cy - shipHeight/2, pxShipRight - pxShipLeft, shipHeight, 20);
+        ctx.fill(); ctx.stroke();
+
+        // Spaceship Length Badge
+        const obsLenKm = state.view === 'red' ? L : (L / state.gamma);
+        ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 13px Jua'; ctx.textAlign = 'center';
+        ctx.fillText(`📐 우주선 관측 길이: ${obsLenKm.toFixed(2)} km ${state.view === 'blue' ? '(길이 수축 L/γ)' : '(고유 길이 L)'}`, pxShipCenter, cy - shipHeight/2 + 20);
+
+        // Laser Light Pulses
+        if (t > 0) {
+            if (t <= tA) {
+                const laserX = -t; 
+                const pxLaser = offsetX + laserX * pixelsPerKm;
+                const pxOrigin = offsetX;
+                let pxTail = pxLaser + 60; 
+                if (pxTail > pxOrigin) pxTail = pxOrigin;
+                drawPulse(ctx, pxTail, laserY, pxLaser, laserY, '#eab308', false);
+            } else if (t > tA && t <= tRet) {
+                const xA = state.view === 'red' ? -5 : state.events.A.x_blue;
+                const retX = xA + (t - tA);
+                const pxRet = offsetX + retX * pixelsPerKm;
+                const pxOrigin = offsetX + xA * pixelsPerKm;
+                let pxTail = pxRet - 60;
+                if (pxTail < pxOrigin) pxTail = pxOrigin;
+                drawPulse(ctx, pxTail, laserY, pxRet, laserY, '#06b6d4', true);
+            }
+
+            if (t <= tB) {
+                const laserX = t;
+                const pxLaser = offsetX + laserX * pixelsPerKm;
+                const pxOrigin = offsetX; 
+                let pxTail = pxLaser - 60;
+                if (pxTail < pxOrigin) pxTail = pxOrigin;
+                drawPulse(ctx, pxTail, laserY, pxLaser, laserY, '#eab308', false);
+            } else if (t > tB && t <= tRet) {
+                const xB = state.view === 'red' ? 5 : state.events.B.x_blue;
+                const retX = xB - (t - tB); 
+                const pxRet = offsetX + retX * pixelsPerKm;
+                const pxOrigin = offsetX + xB * pixelsPerKm;
+                let pxTail = pxRet + 60;
+                if (pxTail > pxOrigin) pxTail = pxOrigin;
+                drawPulse(ctx, pxTail, laserY, pxRet, laserY, '#06b6d4', true);
+            }
+        }
+
+        ctx.font = '50px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const currentAX = pxShipLeft + 40;
+        const currentBX = pxShipRight - 40;
+
+        if(t <= tA) {
+            ctx.fillText('👽', currentAX, charY);
+            hideEventOverlay('a');
+        } else {
+            if(state.events.A.hitScreenX === null) {
+                state.events.A.hitScreenX = currentAX;
+                state.events.A.hitScreenY = charY;
+                state.events.A.hit = true;
+            }
+            ctx.fillText('💀', state.events.A.hitScreenX, state.events.A.hitScreenY);
+            showEventOverlay('a', state.events.A.hitScreenX, state.events.A.hitScreenY - 60);
+        }
+
+        if(t <= tB) {
+            ctx.fillText('👽', currentBX, charY);
+            hideEventOverlay('b');
+        } else {
+            if(state.events.B.hitScreenX === null) {
+                state.events.B.hitScreenX = currentBX;
+                state.events.B.hitScreenY = charY;
+                state.events.B.hit = true;
+            }
+            ctx.fillText('💀', state.events.B.hitScreenX, state.events.B.hitScreenY);
+            showEventOverlay('b', state.events.B.hitScreenX, state.events.B.hitScreenY - 60);
+        }
+
+        drawDragon(ctx, pxShipCenter, charY, '#ef4444', false); 
+        
+        if (t >= tRet) {
+            if (state.events.Return.hitScreenX === null) {
+                state.events.Return.hitScreenX = pxShipCenter;
+                state.events.Return.hitScreenY = laserY - 60;
+                state.events.Return.received = true;
+            }
+            showEventOverlay('center', state.events.Return.hitScreenX, state.events.Return.hitScreenY);
+            
+            if (state.status === 'playing' && t > tRet + 2) {
+                state.status = 'idle'; 
+            }
+        } else {
+            hideEventOverlay('center');
+        }
+    }
+
+    function drawPulse(ctx, sx, sy, ex, ey, color, isDashed=false) {
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
+        ctx.strokeStyle = color; ctx.lineWidth = 6; ctx.lineCap = 'round'; 
+        
+        if (isDashed) {
+            ctx.setLineDash([8, 8]); ctx.stroke(); ctx.setLineDash([]);
+            ctx.fillStyle = '#22d3ee'; ctx.beginPath(); ctx.arc(ex, ey, 8, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 10; ctx.shadowColor = '#22d3ee'; ctx.stroke(); ctx.shadowBlur = 0;
+        } else {
+            ctx.stroke();
+            ctx.strokeStyle = color + '66'; ctx.lineWidth = 14; ctx.stroke(); 
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI*2); ctx.fill();
+        }
+    }
+
+    function showEventOverlay(id, x, y) {
+        const el = document.getElementById(`event-overlay-${id}`);
+        if (el && el.classList.contains('hidden')) {
+            el.classList.remove('hidden'); el.classList.add('flex');
+        }
+        if (el) {
+            el.style.left = `${x}px`; el.style.top = `${y}px`;
+        }
+    }
+    function hideEventOverlay(id) {
+        const el = document.getElementById(`event-overlay-${id}`);
+        if(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+    }
+    function hideEventOverlays() {
+        ['a', 'b', 'center'].forEach(hideEventOverlay);
+    }
+
+    function loop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const dt = (timestamp - lastTime) / 1000;
+        lastTime = timestamp;
+
+        if (activePhase === 1 && state.status === 'playing') {
+            state.simTime += dt * 3.0; 
+            drawSimulation();
+        }
+        animId = requestAnimationFrame(loop);
+    }
+
+    function drawMinkowski() {
+        const canvasR = document.getElementById('canvas-mink-red');
+        const canvasB = document.getElementById('canvas-mink-blue');
+        if(!canvasR || !canvasB) return;
+
+        const ctxR = canvasR.getContext('2d');
+        const ctxB = canvasB.getContext('2d');
+        
+        [canvasR, canvasB].forEach(c => {
+            if(c.parentElement) {
+                c.width = c.parentElement.clientWidth;
+                c.height = c.parentElement.clientHeight;
+            }
+        });
+
+        const renderDiagram = (ctx, isRed) => {
+            const W = ctx.canvas.width;
+            const H = ctx.canvas.height;
+            ctx.clearRect(0, 0, W, H);
+            
+            const hasCelestials = state.showEarthDragon;
+            const maxT = isRed ? 12 : Math.max(12, 10 * state.gamma + 1.5);
+            const maxX_abs = hasCelestials ? 18.0 : 8.5;
+            
+            const paddingX = 50;
+            const paddingY = 50;
+            
+            const scale = Math.min((W - paddingX) / (maxX_abs * 2), (H - paddingY) / maxT);
+            const scaleX = scale;
+            const scaleT = scale;
+            
+            // 수직 중앙 정렬 배치 계산
+            const diagramHeight = maxT * scaleT;
+            const originY = Math.min(H - 25, (H + diagramHeight) / 2 + 10);
+            const originX = W / 2;
+
+            const getPt = (x, t) => ({ px: originX + x * scaleX, py: originY - t * scaleT });
+
+            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
+            for(let i=0; i<=maxT; i+=2) {
+                let py = originY - i*scaleT;
+                ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(W, py); ctx.stroke();
+            }
+            for(let i=-Math.ceil(maxX_abs); i<=Math.ceil(maxX_abs); i+=2) {
+                let px = originX + i*scaleX;
+                ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, H); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(originX, 0); ctx.lineTo(originX, H); ctx.stroke(); 
+            ctx.beginPath(); ctx.moveTo(0, originY); ctx.lineTo(W, originY); ctx.stroke(); 
+            ctx.fillStyle = '#94a3b8'; ctx.font = '14px Roboto Mono';
+            ctx.fillText("x", W - 20, originY - 10); ctx.fillText("ct", originX + 10, 20);
+
+            const drawLine = (p1, p2, color, width=2, dash=[]) => {
+                ctx.beginPath(); ctx.moveTo(p1.px, p1.py); ctx.lineTo(p2.px, p2.py);
+                ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash); ctx.stroke(); ctx.setLineDash([]);
+            };
+            const plotEvent = (pt, color, label, align='left') => {
+                ctx.fillStyle = color; ctx.beginPath(); ctx.arc(pt.px, pt.py, 5, 0, Math.PI*2); ctx.fill();
+                ctx.font = '16px Jua'; ctx.textAlign = align === 'left' ? 'left' : 'right';
+                ctx.fillText(label, pt.px + (align==='left'?10:-10), pt.py - 10);
+            };
+
+            if (hasCelestials) {
+                const xEarth_blue = -15.5;
+                const xDragon_blue = 15.5;
+
+                if (isRed) {
+                    const xEarth_red0 = xEarth_blue / state.gamma;
+                    const xDragon_red0 = xDragon_blue / state.gamma;
+                    
+                    drawLine(getPt(xEarth_red0, 0), getPt(xEarth_red0 - state.v * maxT, maxT), '#3b82f6', 2.5, [6, 4]);
+                    drawLine(getPt(xDragon_red0, 0), getPt(xDragon_red0 - state.v * maxT, maxT), '#10b981', 2.5, [6, 4]);
+
+                    plotEvent(getPt(xEarth_red0, 0), '#3b82f6', '지구 🌍', 'right');
+                    plotEvent(getPt(xDragon_red0, 0), '#10b981', '녹색이 🐉', 'left');
+                } else {
+                    drawLine(getPt(xEarth_blue, 0), getPt(xEarth_blue, maxT), '#3b82f6', 2.5, [6, 4]);
+                    drawLine(getPt(xDragon_blue, 0), getPt(xDragon_blue, maxT), '#10b981', 2.5, [6, 4]);
+
+                    plotEvent(getPt(xEarth_blue, 0), '#3b82f6', '지구 🌍', 'right');
+                    plotEvent(getPt(xDragon_blue, 0), '#10b981', '녹색이 🐉', 'left');
+                }
+            }
+
+            const O = getPt(0,0);
+            let pA, pB, pRet;
+
+            if (isRed) {
+                pA = getPt(-5, 5);
+                pB = getPt(5, 5);
+                pRet = getPt(0, 10);
+                
+                drawLine(getPt(-5,0), getPt(-5, maxT), '#22c55e', 2, [5,5]); 
+                drawLine(getPt(5,0), getPt(5, maxT), '#22c55e', 2, [5,5]); 
+                drawLine(O, getPt(0, maxT), '#ef4444', 2, [5,5]); 
+            } else {
+                const invG = 1/state.gamma;
+                const v = state.v;
+
+                const tA = state.gamma * (5 - 5*v);
+                const xA = -tA; 
+                pA = getPt(xA, tA);
+
+                const tB = state.gamma * (5 + 5*v);
+                const xB = tB; 
+                pB = getPt(xB, tB);
+
+                const tRet = 10 * state.gamma;
+                const xRet = 10 * state.gamma * v;
+                pRet = getPt(xRet, tRet);
+
+                drawLine(getPt(-5*invG, 0), getPt(-5*invG + v*maxT, maxT), '#22c55e', 2, [5,5]);
+                drawLine(getPt(5*invG, 0), getPt(5*invG + v*maxT, maxT), '#22c55e', 2, [5,5]);
+                drawLine(O, getPt(v*maxT, maxT), '#ef4444', 2, [5,5]);
+            }
+
+            drawLine(O, pA, '#eab308', 3); 
+            drawLine(O, pB, '#eab308', 3); 
+            drawLine(pA, pRet, '#06b6d4', 3, [5,5]); 
+            drawLine(pB, pRet, '#06b6d4', 3, [5,5]); 
+            
+            // 빨강이의 동시선 (A·B 피격 사건을 포함하며 지구와 녹색이별 위치까지 길게 연장)
+            if (hasCelestials) {
+                const xEarth_blue = -15.5;
+                const xDragon_blue = 15.5;
+                if (isRed) {
+                    const xEarth_at_t5 = (xEarth_blue / state.gamma) - state.v * 5;
+                    const xDragon_at_t5 = (xDragon_blue / state.gamma) - state.v * 5;
+                    const pSimStart = getPt(xEarth_at_t5, 5);
+                    const pSimEnd = getPt(xDragon_at_t5, 5);
+                    drawLine(pSimStart, pSimEnd, '#ffffff', 2.5, [6, 4]);
+                    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px Jua'; ctx.textAlign = 'center';
+                    ctx.fillText("⚡ 동시선 (t'=5 μs)", (pSimStart.px + pSimEnd.px)/2, pSimStart.py - 10);
+                } else {
+                    const tEarth_at_t5 = state.v * xEarth_blue + 5 / state.gamma;
+                    const tDragon_at_t5 = state.v * xDragon_blue + 5 / state.gamma;
+                    const pSimStart = getPt(xEarth_blue, tEarth_at_t5);
+                    const pSimEnd = getPt(xDragon_blue, tDragon_at_t5);
+                    drawLine(pSimStart, pSimEnd, '#ffffff', 2.5, [6, 4]);
+                    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px Jua'; ctx.textAlign = 'center';
+                    ctx.fillText("⚡ 빨강이 동시선 (기울기 v)", (pSimStart.px + pSimEnd.px)/2, (pSimStart.py + pSimEnd.py)/2 - 12);
+                }
+            } else {
+                if (isRed) {
+                    const pL = getPt(-maxX_abs + 1.5, 5);
+                    const pR = getPt(maxX_abs - 1.5, 5);
+                    drawLine(pL, pR, '#ffffff', 2, [4, 4]);
+                } else {
+                    const xL = -maxX_abs + 1.5;
+                    const xR = maxX_abs - 1.5;
+                    const tL = state.v * xL + 5 / state.gamma;
+                    const tR = state.v * xR + 5 / state.gamma;
+                    drawLine(getPt(xL, tL), getPt(xR, tR), '#ffffff', 2, [4, 4]);
+                }
+            }
+
+            plotEvent(O, '#fff', '발사');
+            plotEvent(pA, '#ef4444', 'A 피격', 'right');
+            plotEvent(pB, '#3b82f6', 'B 피격', 'left');
+            plotEvent(pRet, '#eab308', '죽음 인지', 'left');
+        };
+
+        renderDiagram(ctxR, true);
+        renderDiagram(ctxB, false);
+    }
+
+    let p2State = {
+        v: 0.50,
+        view: 'blue', 
+        time: 5.0, 
+        xEarth_blue: -40.0,
+        xDragon_blue: 40.0,
+        xShip_red: 0.0,
+        xA_red: -5.0,
+        xB_red: 5.0,
+        tMin: -25,
+        tMax: 35
+    };
+
+    const EARTH_STAGES = [
+        { t: -25, label: "원시 지구", icon: "🌋", desc: "용암 바다" },
+        { t: -10, label: "원시 바다", icon: "🌊", desc: "단세포 생물" },
+        { t: 5.0, label: "공룡 시대", icon: "🦖", desc: "거대 공룡" },
+        { t: 20.0, label: "인류 문명", icon: "🏛️", desc: "고대 도시 문명" },
+        { t: 35.0, label: "미래 도시", icon: "🏙️", desc: "첨단 미래 문명" }
+    ];
+
+    const DRAGON_STAGES = [
+        { t: -25, label: "드래곤 알", icon: "🥚", desc: "알 속 잠자는 드래곤" },
+        { t: -10, label: "아기 드래곤", icon: "🐣", desc: "갓 부화한 아기" },
+        { t: 5.0, label: "성체 드래곤", icon: "🐉", desc: "위엄 있는 성체" },
+        { t: 20.0, label: "노년 드래곤", icon: "👓🐉", desc: "늙은 드래곤" },
+        { t: 35.0, label: "별이 됨", icon: "💀🐉", desc: "시공간 속 전설" }
+    ];
+
+    function p2_calculatePhysics() {
+        const gamma = 1 / Math.sqrt(1 - p2State.v * p2State.v);
+        document.getElementById('p2-val-gamma').textContent = gamma.toFixed(3);
+        document.getElementById('p2-val-slope').textContent = (p2State.v).toFixed(3);
+    }
+
+    const p2BlockCanvas = document.getElementById('p2BlockCanvas');
+    const p2BlockCtx = p2BlockCanvas ? p2BlockCanvas.getContext('2d') : null;
+
+    function p2_resizeCanvases() {
+        if(p2BlockCanvas && p2BlockCanvas.parentElement) {
+            p2BlockCanvas.width = p2BlockCanvas.parentElement.clientWidth;
+            p2BlockCanvas.height = p2BlockCanvas.parentElement.clientHeight;
+        }
+    }
+
+    const p2BtnRed = document.getElementById('p2-btn-red');
+    const p2BtnBlue = document.getElementById('p2-btn-blue');
+
+    function p2_setView(view) {
+        p2State.view = view;
+        if(view === 'red') {
+            p2BtnRed.classList.add('active-view');
+            p2BtnBlue.classList.remove('active-view');
+            document.getElementById('p2-time-label').textContent = "시간 (t'):";
+        } else {
+            p2BtnBlue.classList.add('active-view');
+            p2BtnRed.classList.remove('active-view');
+            document.getElementById('p2-time-label').textContent = "시간 (t):";
+        }
+        p2_render();
+    }
+    p2BtnRed.addEventListener('click', () => p2_setView('red'));
+    p2BtnBlue.addEventListener('click', () => p2_setView('blue'));
+
+    const p2SpeedSlider = document.getElementById('p2-speed-slider');
+    p2SpeedSlider.addEventListener('input', (e) => {
+        p2State.v = parseFloat(e.target.value);
+        document.getElementById('p2-speed-disp').textContent = p2State.v.toFixed(2) + "c";
+        sliderV.value = p2State.v;
+        displayV.textContent = p2State.v.toFixed(2) + " c";
+        state.v = p2State.v;
+        p2_calculatePhysics();
+        p2_render();
+    });
+
+    const p2TimeSlider = document.getElementById('p2-time-slider');
+    p2TimeSlider.addEventListener('input', (e) => {
+        p2State.time = parseFloat(e.target.value);
+        document.getElementById('p2-time-disp').textContent = p2State.time.toFixed(2) + " μs";
+        p2_render();
+    });
+
+    function p2_render() {
+        if(activePhase !== 2) return;
+        p2_calculatePhysics();
+        p2_renderBlockUniverseView();
+        p2_updateBannerText();
+    }
+
+    function p2_updateBannerText() {
+        const banner = document.getElementById('p2-banner-text');
+        const v = p2State.v;
+        const gamma = 1 / Math.sqrt(1 - v*v);
+
+        if (p2State.view === 'red') {
+            banner.innerHTML = `<span class="text-red-400 font-bold">🔴 빨강이 관점 (우주선 정지계):</span> A/B 피격을 잇는 동시성선은 수평선(t'=5 μs)이며, <span class="text-emerald-400 font-bold">지구 공룡시대(🦖)</span> 및 <span class="text-emerald-400 font-bold">녹색이 성체(🐉)</span>와 정확히 동시에 만납니다.`;
+        } else {
+            const tEarthInt = -40 * v + 5 / gamma;
+            const tDragonInt = 40 * v + 5 / gamma;
+            banner.innerHTML = `<span class="text-blue-400 font-bold">🔵 파랑이 관점 (지구/외부 정지계):</span> A/B 피격을 잇는 직선(기울기 v=${v.toFixed(2)})을 연장하면 <span class="text-amber-400 font-bold">지구의 먼 과거 (t=${tEarthInt.toFixed(1)}μs, 원시지구🌋)</span> 및 <span class="text-cyan-400 font-bold">녹색이의 먼 미래 (t=${tDragonInt.toFixed(1)}μs, 노년👓🐉)</span>와 만납니다!`;
+        }
+    }
+
+    function p2_renderBlockUniverseView() {
+        if(!p2BlockCtx) return;
+        const W = p2BlockCanvas.width;
+        const H = p2BlockCanvas.height;
+        p2BlockCtx.clearRect(0, 0, W, H);
+
+        const v = p2State.v;
+        const gamma = 1 / Math.sqrt(1 - v*v);
+        const isRed = p2State.view === 'red';
+        const currentTime = p2State.time;
+
+        const marginX = 80, marginY = 40;
+        const blockX = marginX, blockY = marginY, blockW = W - 2 * marginX, blockH = H - 2 * marginY;
+        
+        p2BlockCtx.fillStyle = '#020617';
+        p2BlockCtx.strokeStyle = '#334155';
+        p2BlockCtx.lineWidth = 3;
+        p2BlockCtx.beginPath();
+        p2BlockCtx.roundRect(blockX, blockY, blockW, blockH, 16);
+        p2BlockCtx.fill(); p2BlockCtx.stroke();
+
+        // Diagram Title & Legend
+        p2BlockCtx.fillStyle = '#a855f7'; p2BlockCtx.font = 'bold 18px Jua'; p2BlockCtx.textAlign = 'left';
+        p2BlockCtx.fillText(
+            isRed ? "🧊 빨강이 관점 4D 블록 유니버스 (c=1, 광선 45°)" : "🔵 파랑이 관점 4D 블록 유니버스 (c=1, 광선 45°)",
+            blockX + 20, blockY - 12
+        );
+
+        p2BlockCtx.font = 'bold 12px Jua'; p2BlockCtx.textAlign = 'right';
+        p2BlockCtx.fillStyle = '#eab308'; p2BlockCtx.fillText("⚡ 광선 (45°)", blockX + blockW - 220, blockY - 12);
+        p2BlockCtx.fillStyle = '#06b6d4'; p2BlockCtx.fillText("📡 귀환 정보 (45°)", blockX + blockW - 120, blockY - 12);
+        p2BlockCtx.fillStyle = '#ef4444'; p2BlockCtx.fillText("🔴 A/B/우주선 세계선", blockX + blockW, blockY - 12);
+
+        const tMin = p2State.tMin; 
+        const tMax = p2State.tMax; 
+        const deltaT = tMax - tMin; 
+
+        const xMin = -50;
+        const xMax = 50;
+        const deltaX = xMax - xMin; 
+
+        const scale = Math.min(blockW / deltaX, blockH / deltaT);
+
+        const originX = blockX + blockW / 2;
+        const originY = blockY + blockH / 2 + ((tMax + tMin) / 2) * scale;
+
+        const getPt = (xVal, tVal) => ({
+            px: originX + xVal * scale,
+            py: originY - tVal * scale
+        });
+
+        // Background Spacetime Grid
+        p2BlockCtx.strokeStyle = '#1e293b'; p2BlockCtx.lineWidth = 1;
+        for(let x = -40; x <= 40; x += 10) {
+            let p1 = getPt(x, tMin), p2 = getPt(x, tMax);
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(p1.px, p1.py); p2BlockCtx.lineTo(p2.px, p2.py); p2BlockCtx.stroke();
+        }
+        for(let t = -20; t <= 30; t += 10) {
+            let p1 = getPt(xMin, t), p2 = getPt(xMax, t);
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(p1.px, p1.py); p2BlockCtx.lineTo(p2.px, p2.py); p2BlockCtx.stroke();
+            p2BlockCtx.fillStyle = '#64748b'; p2BlockCtx.font = 'bold 12px Jua'; p2BlockCtx.textAlign = 'right';
+            p2BlockCtx.fillText(`${t} μs —`, blockX - 8, p1.py + 4);
+        }
+
+        if (isRed) {
+            const pCenter0 = getPt(0, 0);
+            const pA_hit = getPt(-5, 5);
+            const pB_hit = getPt(5, 5);
+            const pRet = getPt(0, 10);
+
+            [-5, 0, 5].forEach((x, idx) => {
+                let pBot = getPt(x, tMin), pTop = getPt(x, tMax);
+                p2BlockCtx.strokeStyle = idx === 1 ? '#f59e0b' : '#ef4444';
+                p2BlockCtx.lineWidth = 3;
+                p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pBot.px, pBot.py); p2BlockCtx.lineTo(pTop.px, pTop.py); p2BlockCtx.stroke();
+            });
+
+            const drawMovingBody = (x0_blue, color) => {
+                p2BlockCtx.strokeStyle = color; p2BlockCtx.lineWidth = 3.5;
+                p2BlockCtx.beginPath();
+                for(let t = tMin; t <= tMax; t += 1) {
+                    let x = (x0_blue / gamma) - v * t;
+                    let pt = getPt(x, t);
+                    if (t === tMin) p2BlockCtx.moveTo(pt.px, pt.py);
+                    else p2BlockCtx.lineTo(pt.px, pt.py);
+                }
+                p2BlockCtx.stroke();
+            };
+            drawMovingBody(-40, '#3b82f6'); 
+            drawMovingBody(40, '#10b981');  
+
+            EARTH_STAGES.forEach(st => {
+                let x = ( -40 / gamma ) - v * st.t;
+                let pt = getPt(x, st.t);
+                p2_drawStageBadge(p2BlockCtx, pt.px, pt.py, st.icon, st.label, '#3b82f6', 'left');
+            });
+            DRAGON_STAGES.forEach(st => {
+                let x = ( 40 / gamma ) - v * st.t;
+                let pt = getPt(x, st.t);
+                p2_drawStageBadge(p2BlockCtx, pt.px, pt.py, st.icon, st.label, '#10b981', 'right');
+            });
+
+            p2BlockCtx.strokeStyle = '#eab308'; p2BlockCtx.lineWidth = 3;
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pCenter0.px, pCenter0.py); p2BlockCtx.lineTo(pA_hit.px, pA_hit.py); p2BlockCtx.stroke();
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pCenter0.px, pCenter0.py); p2BlockCtx.lineTo(pB_hit.px, pB_hit.py); p2BlockCtx.stroke();
+
+            p2BlockCtx.strokeStyle = '#06b6d4'; p2BlockCtx.lineWidth = 3; p2BlockCtx.setLineDash([5, 5]);
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pA_hit.px, pA_hit.py); p2BlockCtx.lineTo(pRet.px, pRet.py); p2BlockCtx.stroke();
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pB_hit.px, pB_hit.py); p2BlockCtx.lineTo(pRet.px, pRet.py); p2BlockCtx.stroke();
+            p2BlockCtx.setLineDash([]);
+
+            p2_drawPointMarker(p2BlockCtx, pCenter0.px, pCenter0.py, "⚡ 발사 (t'=0)", "#eab308", "bottom");
+            p2_drawPointMarker(p2BlockCtx, pA_hit.px, pA_hit.py, "💥 A 피격", "#ef4444", "top");
+            p2_drawPointMarker(p2BlockCtx, pB_hit.px, pB_hit.py, "💥 B 피격", "#ef4444", "top");
+            p2_drawPointMarker(p2BlockCtx, pRet.px, pRet.py, "❗ 죽음 인지 (t'=10)", "#06b6d4", "top");
+
+            let pL = getPt(-45, 5), pR = getPt(45, 5);
+            p2BlockCtx.strokeStyle = '#ef4444'; p2BlockCtx.lineWidth = 2.5;
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pL.px, pL.py); p2BlockCtx.lineTo(pR.px, pR.py); p2BlockCtx.stroke();
+            p2BlockCtx.fillStyle = '#fca5a5'; p2BlockCtx.font = 'bold 13px Jua'; p2BlockCtx.textAlign = 'right';
+            p2BlockCtx.fillText("⚡ 동시성선 (t'=5 μs)", pR.px, pR.py - 6);
+
+            let pNowL = getPt(-45, currentTime), pNowR = getPt(45, currentTime);
+            p2BlockCtx.strokeStyle = '#f87171'; p2BlockCtx.lineWidth = 2; p2BlockCtx.setLineDash([6, 4]);
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pNowL.px, pNowL.py); p2BlockCtx.lineTo(pNowR.px, pNowR.py); p2BlockCtx.stroke();
+            p2BlockCtx.setLineDash([]);
+
+        } else {
+            let pE_bot = getPt(-40, tMin), pE_top = getPt(-40, tMax);
+            let pD_bot = getPt(40, tMin), pD_top = getPt(40, tMax);
+
+            p2BlockCtx.strokeStyle = '#3b82f6'; p2BlockCtx.lineWidth = 4;
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pE_bot.px, pE_bot.py); p2BlockCtx.lineTo(pE_top.px, pE_top.py); p2BlockCtx.stroke();
+
+            p2BlockCtx.strokeStyle = '#10b981'; p2BlockCtx.lineWidth = 4;
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pD_bot.px, pD_bot.py); p2BlockCtx.lineTo(pD_top.px, pD_top.py); p2BlockCtx.stroke();
+
+            EARTH_STAGES.forEach(st => {
+                let pt = getPt(-40, st.t);
+                p2_drawStageBadge(p2BlockCtx, pt.px, pt.py, st.icon, st.label, '#3b82f6', 'left');
+            });
+            DRAGON_STAGES.forEach(st => {
+                let pt = getPt(40, st.t);
+                p2_drawStageBadge(p2BlockCtx, pt.px, pt.py, st.icon, st.label, '#10b981', 'right');
+            });
+
+            const drawMovingShipPart = (x0Prime, color) => {
+                p2BlockCtx.strokeStyle = color; p2BlockCtx.lineWidth = 3;
+                p2BlockCtx.beginPath();
+                for(let t = tMin; t <= tMax; t += 1) {
+                    let x = v * t + (x0Prime / gamma);
+                    let pt = getPt(x, t);
+                    if (t === tMin) p2BlockCtx.moveTo(pt.px, pt.py);
+                    else p2BlockCtx.lineTo(pt.px, pt.py);
+                }
+                p2BlockCtx.stroke();
+            };
+            drawMovingShipPart(-5, '#ef4444');
+            drawMovingShipPart(0, '#f59e0b');
+            drawMovingShipPart(5, '#ef4444');
+
+            const pLaunch = getPt(0, 0);
+
+            const tA = gamma * (5 - 5*v);
+            const xA = -tA; 
+            const pA_hit = getPt(xA, tA);
+
+            const tB = gamma * (5 + 5*v);
+            const xB = tB; 
+            const pB_hit = getPt(xB, tB);
+
+            const tRet = 10 * gamma;
+            const xRet = 10 * gamma * v;
+            const pRet = getPt(xRet, tRet);
+
+            p2BlockCtx.strokeStyle = '#eab308'; p2BlockCtx.lineWidth = 3;
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pLaunch.px, pLaunch.py); p2BlockCtx.lineTo(pA_hit.px, pA_hit.py); p2BlockCtx.stroke();
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pLaunch.px, pLaunch.py); p2BlockCtx.lineTo(pB_hit.px, pB_hit.py); p2BlockCtx.stroke();
+
+            p2BlockCtx.strokeStyle = '#06b6d4'; p2BlockCtx.lineWidth = 3; p2BlockCtx.setLineDash([5, 5]);
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pA_hit.px, pA_hit.py); p2BlockCtx.lineTo(pRet.px, pRet.py); p2BlockCtx.stroke();
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pB_hit.px, pB_hit.py); p2BlockCtx.lineTo(pRet.px, pRet.py); p2BlockCtx.stroke();
+            p2BlockCtx.setLineDash([]);
+
+            p2_drawPointMarker(p2BlockCtx, pLaunch.px, pLaunch.py, "⚡ 발사 (t=0)", "#eab308", "bottom");
+            p2_drawPointMarker(p2BlockCtx, pA_hit.px, pA_hit.py, `💥 A (t=${tA.toFixed(1)})`, "#ef4444", "bottom");
+            p2_drawPointMarker(p2BlockCtx, pB_hit.px, pB_hit.py, `💥 B (t=${tB.toFixed(1)})`, "#ef4444", "top");
+            p2_drawPointMarker(p2BlockCtx, pRet.px, pRet.py, `❗ 죽음 인지 (t=${tRet.toFixed(1)})`, "#06b6d4", "top");
+
+            const tEarthInt = -40 * v + 5 / gamma;
+            const tDragonInt = 40 * v + 5 / gamma;
+            const pEarthInt = getPt(-40, tEarthInt);
+            const pDragonInt = getPt(40, tDragonInt);
+
+            p2BlockCtx.strokeStyle = '#ef4444'; p2BlockCtx.lineWidth = 3;
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pEarthInt.px, pEarthInt.py); p2BlockCtx.lineTo(pDragonInt.px, pDragonInt.py); p2BlockCtx.stroke();
+
+            p2_drawPointMarker(p2BlockCtx, pEarthInt.px, pEarthInt.py, `🌋 (t=${tEarthInt.toFixed(1)}μs)`, "#f59e0b", "top");
+            p2_drawPointMarker(p2BlockCtx, pDragonInt.px, pDragonInt.py, `👓🐉 (t=${tDragonInt.toFixed(1)}μs)`, "#a7f3d0", "top");
+
+            p2BlockCtx.fillStyle = '#fca5a5'; p2BlockCtx.font = 'bold 13px Jua'; p2BlockCtx.textAlign = 'left';
+            p2BlockCtx.fillText("⚡ 빨강이 동시성선 (기울기 v)", pDragonInt.px + 10, pDragonInt.py + 4);
+
+            let pNowL = getPt(-45, currentTime), pNowR = getPt(45, currentTime);
+            p2BlockCtx.strokeStyle = '#3b82f6'; p2BlockCtx.lineWidth = 2; p2BlockCtx.setLineDash([6, 4]);
+            p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pNowL.px, pNowL.py); p2BlockCtx.lineTo(pNowR.px, pNowR.py); p2BlockCtx.stroke();
+            p2BlockCtx.setLineDash([]);
+        }
+    }
+
+    function p2_drawStageBadge(ctx, x, y, icon, label, color, align) {
+        ctx.save();
+        ctx.font = '18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        let iconX = align === 'left' ? x - 22 : x + 22;
+        ctx.fillText(icon, iconX, y);
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '12px Jua';
+        ctx.textAlign = align === 'left' ? 'right' : 'left';
+        let labelX = align === 'left' ? iconX - 16 : iconX + 16;
+        ctx.fillText(label, labelX, y);
+        ctx.restore();
+    }
+
+    function p2_drawPointMarker(ctx, x, y, label, color, position="top") {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 13px Jua';
+        ctx.textAlign = 'center';
+        let offsetY = position === "top" ? -10 : 18;
+        ctx.fillText(label, x, y + offsetY);
+        ctx.restore();
+    }
+
+    window.addEventListener('load', () => {
+        calculatePhysics();
+        p2_calculatePhysics();
+        resizeCanvas();
+        resetSim();
+
+        if (!animId) {
+            animId = requestAnimationFrame(loop);
+        }
+    });
+</script>
+</body>
+</html>
