@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>동시성의 상대성 & 블록 유니버스 시뮬레이터 </title>
+    <title>동시성의 상대성 & 블록 유니버스 시뮬레이터</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@300;400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     
@@ -145,12 +145,12 @@
             
             <!-- Dynamic Event Overlays for Phase 1 -->
             <div id="event-overlay-a" class="absolute hidden flex-col items-center justify-center z-10 pointer-events-none transform -translate-x-1/2 -translate-y-1/2">
-                <div class="text-red-500 text-6xl drop-shadow-[0_0_10px_rgba(239,68,68,1)] title-font">💥</div>
-                <div class="bg-red-600/90 text-white px-3 py-1 rounded-full title-font text-lg mt-1 border border-red-300">A 피격</div>
+                <div class="text-purple-500 text-6xl drop-shadow-[0_0_10px_rgba(168,85,247,1)] title-font">💥</div>
+                <div class="bg-purple-600/90 text-white px-3 py-1 rounded-full title-font text-lg mt-1 border border-purple-300">A 피격</div>
             </div>
             <div id="event-overlay-b" class="absolute hidden flex-col items-center justify-center z-10 pointer-events-none transform -translate-x-1/2 -translate-y-1/2">
-                <div class="text-blue-500 text-6xl drop-shadow-[0_0_10px_rgba(59,130,246,1)] title-font">💥</div>
-                <div class="bg-blue-600/90 text-white px-3 py-1 rounded-full title-font text-lg mt-1 border border-blue-300">B 피격</div>
+                <div class="text-purple-500 text-6xl drop-shadow-[0_0_10px_rgba(168,85,247,1)] title-font">💥</div>
+                <div class="bg-purple-600/90 text-white px-3 py-1 rounded-full title-font text-lg mt-1 border border-purple-300">B 피격</div>
             </div>
             <div id="event-overlay-center" class="absolute hidden flex-col items-center justify-center z-10 pointer-events-none transform -translate-x-1/2 -translate-y-1/2">
                 <div class="text-yellow-400 text-5xl drop-shadow-[0_0_10px_rgba(250,204,21,1)] title-font">❗</div>
@@ -179,11 +179,11 @@
             <div class="flex flex-col flex-1 max-w-xs bg-slate-800 p-3 rounded-xl border border-slate-600">
                 <div class="flex justify-between items-center mb-1">
                     <label class="title-font text-xl text-slate-300">우주선 속도 (v)</label>
-                    <span id="speed-display" class="font-mono text-xl font-bold text-yellow-400 bg-black px-3 py-1 rounded">0.80 c</span>
+                    <span id="speed-display" class="font-mono text-xl font-bold text-yellow-400 bg-black px-3 py-1 rounded">0.50 c</span>
                 </div>
                 <div class="flex items-center gap-3">
                     <span class="text-sm font-mono text-slate-400">0</span>
-                    <input type="range" id="speed-slider" min="0" max="0.80" step="0.01" value="0.5">
+                    <input type="range" id="speed-slider" min="0" max="0.50" step="0.01" value="0.5">
                     <span class="text-sm font-mono text-slate-400">0.50c</span>
                 </div>
             </div>
@@ -259,7 +259,7 @@
                     💡 핵심 물리 인사이트
                 </span>
                 <p id="p2-banner-text" class="text-slate-200 title-font text-base">
-                    파랑이 관점에서는 A와 B의 피격 사건을 잇는 직선이 기울어져 있으며, 우주선의 길이 30km 확장에 따라 시간격 및 세계선 분리가 훨씬 선명하게 나타납니다!
+                    파랑이 관점에서는 A와 B의 피격 사건을 잇는 흰색 점선(동시성선)이 기울어져 나타납니다!
                 </p>
             </div>
             <div class="flex gap-4 mono-font text-xs text-slate-400">
@@ -282,10 +282,10 @@
                 <div class="flex justify-between bg-slate-900 p-2 rounded"><span class="text-cyan-400">우주선 관측 길이 (L') :</span> <span id="val-ship-len" class="text-cyan-300 font-bold">25.98 km</span></div>
                 <hr class="border-slate-600 my-2">
                 <div class="text-sm text-slate-400 mb-1">현재 선택된 관점 기준 시간 (발사 = 0.00 μs)</div>
-                <div class="flex justify-between bg-slate-900 p-2 rounded"><span class="text-red-400">A 피격 시간 (t_A) :</span> <span id="val-ta" class="font-bold">--</span></div>
-                <div class="flex justify-between bg-slate-900 p-2 rounded"><span class="text-blue-400">B 피격 시간 (t_B) :</span> <span id="val-tb" class="font-bold">--</span></div>
+                <div class="flex justify-between bg-slate-900 p-2 rounded"><span class="text-purple-400">A 피격 시간 (t_A) :</span> <span id="val-ta" class="font-bold">--</span></div>
+                <div class="flex justify-between bg-slate-900 p-2 rounded"><span class="text-purple-400">B 피격 시간 (t_B) :</span> <span id="val-tb" class="font-bold">--</span></div>
                 <div class="flex justify-between bg-slate-900 p-2 rounded border border-yellow-500/30 mt-2"><span class="text-yellow-400 font-bold">시간 차이 (Δt) :</span> <span id="val-dt" class="font-bold text-xl text-yellow-300">0.00 μs</span></div>
-                <div class="flex justify-between bg-slate-900 p-2 rounded mt-2"><span class="text-purple-400">사망 정보 도달 (t_ret) :</span> <span id="val-tret" class="font-bold text-lg">--</span></div>
+                <div class="flex justify-between bg-slate-900 p-2 rounded mt-2"><span class="text-yellow-400">사망 정보 도달 (t_ret) :</span> <span id="val-tret" class="font-bold text-lg">--</span></div>
             </div>
         </div>
     </div>
@@ -315,11 +315,12 @@
                 </div>
             </div>
             
+            <!-- Updated Minkowski Legend -->
             <div id="minkowski-legend" class="p-3 bg-slate-800 text-center text-slate-300 title-font text-base sm:text-lg flex justify-center gap-4 sm:gap-6 flex-wrap shrink-0 border-t border-slate-700">
-                <span class="text-yellow-400">■ 광선 (발사 - 45° 기울기)</span>
-                <span class="text-cyan-400">■ 귀환 정보 (죽음 - 45° 기울기)</span>
-                <span class="text-green-400">■ 외계인 A/B 세계선</span>
-                <span class="text-white">■ 동시성의 선 (빨강이 기준)</span>
+                <span class="text-red-500">■ 빨강이 세계선</span>
+                <span class="text-yellow-400">■ 광선 & 귀환정보 (45°)</span>
+                <span class="text-purple-400">■ 외계인 A/B 세계선</span>
+                <span class="text-white">--- 빨강이 동시성선 (흰색 점선)</span>
                 <span id="mink-legend-earth" class="text-blue-400 hidden">■ 지구 세계선 🌍</span>
                 <span id="mink-legend-dragon" class="text-emerald-400 hidden">■ 녹색이 세계선 🐉</span>
             </div>
@@ -351,7 +352,7 @@
 
     /* Core Physics Constants & State */
     const C = 1; 
-    const L = 30; // 우주선 고유 길이 (30km 로 확장)
+    const L = 30; // 우주선 고유 길이 (30km)
     const TIME_MULTIPLIER = 3.33; // 표시용 마이크로초 환산 스케일
 
     let activePhase = 1; 
@@ -622,7 +623,7 @@
         
         let span, offsetX, pixelsPerKm;
         if (state.showEarthDragon) {
-            span = 100; // 30km 우주선에 맞춰 스판 확장
+            span = 100;
             pixelsPerKm = (W * 0.85) / span;
             offsetX = W / 2;
         } else {
@@ -776,6 +777,7 @@
         ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 13px Jua'; ctx.textAlign = 'center';
         ctx.fillText(`📐 우주선 관측 길이: ${obsLenKm.toFixed(2)} km ${state.view === 'blue' ? '(길이 수축 L/γ)' : '(고유 길이 L)'}`, pxShipCenter, cy - shipHeight/2 + 20);
 
+        // 광선 및 귀환 정보 (노란색 통일)
         if (t > 0) {
             if (t <= tA) {
                 const laserX = -t; 
@@ -791,7 +793,7 @@
                 const pxOrigin = offsetX + xA * pixelsPerKm;
                 let pxTail = pxRet - 60;
                 if (pxTail < pxOrigin) pxTail = pxOrigin;
-                drawPulse(ctx, pxTail, laserY, pxRet, laserY, '#06b6d4', true);
+                drawPulse(ctx, pxTail, laserY, pxRet, laserY, '#eab308', true); // 귀환 광선도 노란색 통일
             }
 
             if (t <= tB) {
@@ -808,7 +810,7 @@
                 const pxOrigin = offsetX + xB * pixelsPerKm;
                 let pxTail = pxRet + 60;
                 if (pxTail > pxOrigin) pxTail = pxOrigin;
-                drawPulse(ctx, pxTail, laserY, pxRet, laserY, '#06b6d4', true);
+                drawPulse(ctx, pxTail, laserY, pxRet, laserY, '#eab308', true); // 귀환 광선도 노란색 통일
             }
         }
 
@@ -866,8 +868,8 @@
         
         if (isDashed) {
             ctx.setLineDash([8, 8]); ctx.stroke(); ctx.setLineDash([]);
-            ctx.fillStyle = '#22d3ee'; ctx.beginPath(); ctx.arc(ex, ey, 8, 0, Math.PI*2); ctx.fill();
-            ctx.shadowBlur = 10; ctx.shadowColor = '#22d3ee'; ctx.stroke(); ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(ex, ey, 8, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 10; ctx.shadowColor = '#eab308'; ctx.stroke(); ctx.shadowBlur = 0;
         } else {
             ctx.stroke();
             ctx.strokeStyle = color + '66'; ctx.lineWidth = 14; ctx.stroke(); 
@@ -898,12 +900,13 @@
         lastTime = timestamp;
 
         if (activePhase === 1 && state.status === 'playing') {
-            state.simTime += dt * 5.0; // 애니메이션 이동 속도 튜닝
+            state.simTime += dt * 5.0; 
             drawSimulation();
         }
         animId = requestAnimationFrame(loop);
     }
 
+    /* 📈 시공간 도표 (Minkowski Diagram) 드로잉 함수 - 색상 및 선규칙 수정 적용 */
     function drawMinkowski() {
         const canvasR = document.getElementById('canvas-mink-red');
         const canvasB = document.getElementById('canvas-mink-blue');
@@ -968,6 +971,7 @@
                 ctx.fillText(label, pt.px + (align==='left'?10:-10), pt.py - 10);
             };
 
+            // 지구(파란색) & 녹색이 별(녹색) 세계선
             if (hasCelestials) {
                 const xEarth_blue = -40.0;
                 const xDragon_blue = 40.0;
@@ -976,14 +980,14 @@
                     const xEarth_red0 = xEarth_blue / state.gamma;
                     const xDragon_red0 = xDragon_blue / state.gamma;
                     
-                    drawLine(getPt(xEarth_red0, 0), getPt(xEarth_red0 - state.v * maxT, maxT), '#3b82f6', 2.5, [6, 4]);
-                    drawLine(getPt(xDragon_red0, 0), getPt(xDragon_red0 - state.v * maxT, maxT), '#10b981', 2.5, [6, 4]);
+                    drawLine(getPt(xEarth_red0, 0), getPt(xEarth_red0 - state.v * maxT, maxT), '#3b82f6', 2.5); // 지구 파란색
+                    drawLine(getPt(xDragon_red0, 0), getPt(xDragon_red0 - state.v * maxT, maxT), '#10b981', 2.5); // 녹색이 녹색
 
                     plotEvent(getPt(xEarth_red0, 0), '#3b82f6', '지구 🌍', 'right');
                     plotEvent(getPt(xDragon_red0, 0), '#10b981', '녹색이 🐉', 'left');
                 } else {
-                    drawLine(getPt(xEarth_blue, 0), getPt(xEarth_blue, maxT), '#3b82f6', 2.5, [6, 4]);
-                    drawLine(getPt(xDragon_blue, 0), getPt(xDragon_blue, maxT), '#10b981', 2.5, [6, 4]);
+                    drawLine(getPt(xEarth_blue, 0), getPt(xEarth_blue, maxT), '#3b82f6', 2.5); // 지구 파란색
+                    drawLine(getPt(xDragon_blue, 0), getPt(xDragon_blue, maxT), '#10b981', 2.5); // 녹색이 녹색
 
                     plotEvent(getPt(xEarth_blue, 0), '#3b82f6', '지구 🌍', 'right');
                     plotEvent(getPt(xDragon_blue, 0), '#10b981', '녹색이 🐉', 'left');
@@ -998,9 +1002,11 @@
                 pB = getPt(halfL, halfL);
                 pRet = getPt(0, L);
                 
-                drawLine(getPt(-halfL,0), getPt(-halfL, maxT), '#22c55e', 2, [5,5]); 
-                drawLine(getPt(halfL,0), getPt(halfL, maxT), '#22c55e', 2, [5,5]); 
-                drawLine(O, getPt(0, maxT), '#ef4444', 2, [5,5]); 
+                // 외계인 A, B 세계선: 보라색 (#a855f7)
+                drawLine(getPt(-halfL,0), getPt(-halfL, maxT), '#a855f7', 2); 
+                drawLine(getPt(halfL,0), getPt(halfL, maxT), '#a855f7', 2); 
+                // 빨강이 세계선: 빨간색 (#ef4444)
+                drawLine(O, getPt(0, maxT), '#ef4444', 2.5); 
             } else {
                 const invG = 1/state.gamma;
                 const v = state.v;
@@ -1017,17 +1023,20 @@
                 const xRet = L * state.gamma * v;
                 pRet = getPt(xRet, tRet);
 
-                drawLine(getPt(-halfL*invG, 0), getPt(-halfL*invG + v*maxT, maxT), '#22c55e', 2, [5,5]);
-                drawLine(getPt(halfL*invG, 0), getPt(halfL*invG + v*maxT, maxT), '#22c55e', 2, [5,5]);
-                drawLine(O, getPt(v*maxT, maxT), '#ef4444', 2, [5,5]);
+                // 외계인 A, B 세계선: 보라색 (#a855f7)
+                drawLine(getPt(-halfL*invG, 0), getPt(-halfL*invG + v*maxT, maxT), '#a855f7', 2);
+                drawLine(getPt(halfL*invG, 0), getPt(halfL*invG + v*maxT, maxT), '#a855f7', 2);
+                // 빨강이 세계선: 빨간색 (#ef4444)
+                drawLine(O, getPt(v*maxT, maxT), '#ef4444', 2.5);
             }
 
+            // 광선 및 귀환 정보 광선: 모두 노란색 (#eab308) 통일
             drawLine(O, pA, '#eab308', 3); 
             drawLine(O, pB, '#eab308', 3); 
-            drawLine(pA, pRet, '#06b6d4', 3, [5,5]); 
-            drawLine(pB, pRet, '#06b6d4', 3, [5,5]); 
+            drawLine(pA, pRet, '#eab308', 3, [5, 5]); // 귀환정보 (노란색 점선)
+            drawLine(pB, pRet, '#eab308', 3, [5, 5]); // 귀환정보 (노란색 점선)
             
-            // 빨강이의 동시선 (A·B 피격 사건 t'=15 μs 연결)
+            // 빨강이 동시성선: 흰색 점선 (#ffffff, dashed)
             if (hasCelestials) {
                 const xEarth_blue = -40.0;
                 const xDragon_blue = 40.0;
@@ -1063,8 +1072,8 @@
             }
 
             plotEvent(O, '#fff', '발사');
-            plotEvent(pA, '#ef4444', 'A 피격', 'right');
-            plotEvent(pB, '#3b82f6', 'B 피격', 'left');
+            plotEvent(pA, '#a855f7', 'A 피격', 'right');
+            plotEvent(pB, '#a855f7', 'B 피격', 'left');
             plotEvent(pRet, '#eab308', '죽음 인지', 'left');
         };
 
@@ -1167,14 +1176,15 @@
         const gamma = 1 / Math.sqrt(1 - v*v);
 
         if (p2State.view === 'red') {
-            banner.innerHTML = `<span class="text-red-400 font-bold">🔴 빨강이 관점 (우주선 정지계):</span> A/B 피격을 잇는 동시성선은 수평선(t'=15 μs)이며, <span class="text-emerald-400 font-bold">지구 공룡시대(🦖)</span> 및 <span class="text-emerald-400 font-bold">녹색이 성체(🐉)</span>와 정확히 동시에 만납니다.`;
+            banner.innerHTML = `<span class="text-red-400 font-bold">🔴 빨강이 관점 (우주선 정지계):</span> A/B 피격을 잇는 동시성선은 수평선(흰색 점선, t'=15 μs)이며, <span class="text-blue-400 font-bold">지구 공룡시대(🦖)</span> 및 <span class="text-emerald-400 font-bold">녹색이 성체(🐉)</span>와 동시에 만납니다.`;
         } else {
             const tEarthInt = -40 * v + 15 / gamma;
             const tDragonInt = 40 * v + 15 / gamma;
-            banner.innerHTML = `<span class="text-blue-400 font-bold">🔵 파랑이 관점 (지구/외부 정지계):</span> A/B 피격을 잇는 직선(기울기 v=${v.toFixed(2)})을 연장하면 <span class="text-amber-400 font-bold">지구의 과거 (t=${tEarthInt.toFixed(1)}μs)</span> 및 <span class="text-cyan-400 font-bold">녹색이의 미래 (t=${tDragonInt.toFixed(1)}μs)</span>와 만납니다!`;
+            banner.innerHTML = `<span class="text-blue-400 font-bold">🔵 파랑이 관점 (지구/외부 정지계):</span> A/B 피격을 잇는 흰색 점선(기울기 v=${v.toFixed(2)})을 연장하면 <span class="text-amber-400 font-bold">지구의 과거 (t=${tEarthInt.toFixed(1)}μs)</span> 및 <span class="text-emerald-400 font-bold">녹색이의 미래 (t=${tDragonInt.toFixed(1)}μs)</span>와 만납니다!`;
         }
     }
 
+    /* Phase 2 Block Universe rendering with updated styling */
     function p2_renderBlockUniverseView() {
         if(!p2BlockCtx) return;
         const W = p2BlockCanvas.width;
@@ -1203,9 +1213,9 @@
         );
 
         p2BlockCtx.font = 'bold 12px Jua'; p2BlockCtx.textAlign = 'right';
-        p2BlockCtx.fillStyle = '#eab308'; p2BlockCtx.fillText("⚡ 광선 (45°)", blockX + blockW - 220, blockY - 12);
-        p2BlockCtx.fillStyle = '#06b6d4'; p2BlockCtx.fillText("📡 귀환 정보 (45°)", blockX + blockW - 120, blockY - 12);
-        p2BlockCtx.fillStyle = '#ef4444'; p2BlockCtx.fillText("🔴 A/B/우주선 세계선", blockX + blockW, blockY - 12);
+        p2BlockCtx.fillStyle = '#eab308'; p2BlockCtx.fillText("⚡ 빛 신호 (45°)", blockX + blockW - 320, blockY - 12);
+        p2BlockCtx.fillStyle = '#ef4444'; p2BlockCtx.fillText("🔴 빨강이 세계선", blockX + blockW - 200, blockY - 12);
+        p2BlockCtx.fillStyle = '#a855f7'; p2BlockCtx.fillText("🟣 외계인 A/B 세계선", blockX + blockW, blockY - 12);
 
         const tMin = p2State.tMin; 
         const tMax = p2State.tMax; 
@@ -1244,9 +1254,10 @@
             const pB_hit = getPt(15, 15);
             const pRet = getPt(0, 30);
 
+            // 외계인 A, B: 보라색(#a855f7) / 빨강이 우주선: 빨간색(#ef4444)
             [-15, 0, 15].forEach((x, idx) => {
                 let pBot = getPt(x, tMin), pTop = getPt(x, tMax);
-                p2BlockCtx.strokeStyle = idx === 1 ? '#f59e0b' : '#ef4444';
+                p2BlockCtx.strokeStyle = idx === 1 ? '#ef4444' : '#a855f7';
                 p2BlockCtx.lineWidth = 3;
                 p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pBot.px, pBot.py); p2BlockCtx.lineTo(pTop.px, pTop.py); p2BlockCtx.stroke();
             });
@@ -1262,8 +1273,8 @@
                 }
                 p2BlockCtx.stroke();
             };
-            drawMovingBody(-40, '#3b82f6'); 
-            drawMovingBody(40, '#10b981');  
+            drawMovingBody(-40, '#3b82f6'); // 지구: 파란색
+            drawMovingBody(40, '#10b981');  // 녹색이 별: 녹색
 
             EARTH_STAGES.forEach(st => {
                 let x = ( -40 / gamma ) - v * st.t;
@@ -1276,24 +1287,27 @@
                 p2_drawStageBadge(p2BlockCtx, pt.px, pt.py, st.icon, st.label, '#10b981', 'right');
             });
 
+            // 광선 및 귀환정보: 모두 노란색
             p2BlockCtx.strokeStyle = '#eab308'; p2BlockCtx.lineWidth = 3;
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pCenter0.px, pCenter0.py); p2BlockCtx.lineTo(pA_hit.px, pA_hit.py); p2BlockCtx.stroke();
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pCenter0.px, pCenter0.py); p2BlockCtx.lineTo(pB_hit.px, pB_hit.py); p2BlockCtx.stroke();
 
-            p2BlockCtx.strokeStyle = '#06b6d4'; p2BlockCtx.lineWidth = 3; p2BlockCtx.setLineDash([5, 5]);
+            p2BlockCtx.strokeStyle = '#eab308'; p2BlockCtx.lineWidth = 3; p2BlockCtx.setLineDash([5, 5]);
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pA_hit.px, pA_hit.py); p2BlockCtx.lineTo(pRet.px, pRet.py); p2BlockCtx.stroke();
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pB_hit.px, pB_hit.py); p2BlockCtx.lineTo(pRet.px, pRet.py); p2BlockCtx.stroke();
             p2BlockCtx.setLineDash([]);
 
             p2_drawPointMarker(p2BlockCtx, pCenter0.px, pCenter0.py, "⚡ 발사 (t'=0)", "#eab308", "bottom");
-            p2_drawPointMarker(p2BlockCtx, pA_hit.px, pA_hit.py, "💥 A (t'=15)", "#ef4444", "top");
-            p2_drawPointMarker(p2BlockCtx, pB_hit.px, pB_hit.py, "💥 B (t'=15)", "#ef4444", "top");
-            p2_drawPointMarker(p2BlockCtx, pRet.px, pRet.py, "❗ 인지 (t'=30)", "#06b6d4", "top");
+            p2_drawPointMarker(p2BlockCtx, pA_hit.px, pA_hit.py, "💥 A (t'=15)", "#a855f7", "top");
+            p2_drawPointMarker(p2BlockCtx, pB_hit.px, pB_hit.py, "💥 B (t'=15)", "#a855f7", "top");
+            p2_drawPointMarker(p2BlockCtx, pRet.px, pRet.py, "❗ 인지 (t'=30)", "#eab308", "top");
 
+            // 동시성선: 흰색 점선 (#ffffff, dashed)
             let pL = getPt(-55, 15), pR = getPt(55, 15);
-            p2BlockCtx.strokeStyle = '#ef4444'; p2BlockCtx.lineWidth = 2.5;
+            p2BlockCtx.strokeStyle = '#ffffff'; p2BlockCtx.lineWidth = 2.5; p2BlockCtx.setLineDash([6, 4]);
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pL.px, pL.py); p2BlockCtx.lineTo(pR.px, pR.py); p2BlockCtx.stroke();
-            p2BlockCtx.fillStyle = '#fca5a5'; p2BlockCtx.font = 'bold 13px Jua'; p2BlockCtx.textAlign = 'right';
+            p2BlockCtx.setLineDash([]);
+            p2BlockCtx.fillStyle = '#ffffff'; p2BlockCtx.font = 'bold 13px Jua'; p2BlockCtx.textAlign = 'right';
             p2BlockCtx.fillText("⚡ 동시성선 (t'=15 μs)", pR.px, pR.py - 6);
 
             let pNowL = getPt(-55, currentTime), pNowR = getPt(55, currentTime);
@@ -1302,6 +1316,7 @@
             p2BlockCtx.setLineDash([]);
 
         } else {
+            // 지구: 파란색(#3b82f6) / 녹색이 별: 녹색(#10b981)
             let pE_bot = getPt(-40, tMin), pE_top = getPt(-40, tMax);
             let pD_bot = getPt(40, tMin), pD_top = getPt(40, tMax);
 
@@ -1320,6 +1335,7 @@
                 p2_drawStageBadge(p2BlockCtx, pt.px, pt.py, st.icon, st.label, '#10b981', 'right');
             });
 
+            // 빨강이 우주선: 빨간색(#ef4444) / 외계인 A, B: 보라색(#a855f7)
             const drawMovingShipPart = (x0Prime, color) => {
                 p2BlockCtx.strokeStyle = color; p2BlockCtx.lineWidth = 3;
                 p2BlockCtx.beginPath();
@@ -1331,9 +1347,9 @@
                 }
                 p2BlockCtx.stroke();
             };
-            drawMovingShipPart(-15, '#ef4444');
-            drawMovingShipPart(0, '#f59e0b');
-            drawMovingShipPart(15, '#ef4444');
+            drawMovingShipPart(-15, '#a855f7'); // 외계인 A
+            drawMovingShipPart(0, '#ef4444');   // 빨강이
+            drawMovingShipPart(15, '#a855f7');  // 외계인 B
 
             const pLaunch = getPt(0, 0);
 
@@ -1349,32 +1365,35 @@
             const xRet = 30 * gamma * v;
             const pRet = getPt(xRet, tRet);
 
+            // 광선 및 귀환정보: 노란색 (#eab308) 통일
             p2BlockCtx.strokeStyle = '#eab308'; p2BlockCtx.lineWidth = 3;
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pLaunch.px, pLaunch.py); p2BlockCtx.lineTo(pA_hit.px, pA_hit.py); p2BlockCtx.stroke();
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pLaunch.px, pLaunch.py); p2BlockCtx.lineTo(pB_hit.px, pB_hit.py); p2BlockCtx.stroke();
 
-            p2BlockCtx.strokeStyle = '#06b6d4'; p2BlockCtx.lineWidth = 3; p2BlockCtx.setLineDash([5, 5]);
+            p2BlockCtx.strokeStyle = '#eab308'; p2BlockCtx.lineWidth = 3; p2BlockCtx.setLineDash([5, 5]);
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pA_hit.px, pA_hit.py); p2BlockCtx.lineTo(pRet.px, pRet.py); p2BlockCtx.stroke();
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pB_hit.px, pB_hit.py); p2BlockCtx.lineTo(pRet.px, pRet.py); p2BlockCtx.stroke();
             p2BlockCtx.setLineDash([]);
 
             p2_drawPointMarker(p2BlockCtx, pLaunch.px, pLaunch.py, "⚡ 발사 (t=0)", "#eab308", "bottom");
-            p2_drawPointMarker(p2BlockCtx, pA_hit.px, pA_hit.py, `💥 A (t=${tA.toFixed(1)})`, "#ef4444", "bottom");
-            p2_drawPointMarker(p2BlockCtx, pB_hit.px, pB_hit.py, `💥 B (t=${tB.toFixed(1)})`, "#ef4444", "top");
-            p2_drawPointMarker(p2BlockCtx, pRet.px, pRet.py, `❗ 인지 (t=${tRet.toFixed(1)})`, "#06b6d4", "top");
+            p2_drawPointMarker(p2BlockCtx, pA_hit.px, pA_hit.py, `💥 A (t=${tA.toFixed(1)})`, "#a855f7", "bottom");
+            p2_drawPointMarker(p2BlockCtx, pB_hit.px, pB_hit.py, `💥 B (t=${tB.toFixed(1)})`, "#a855f7", "top");
+            p2_drawPointMarker(p2BlockCtx, pRet.px, pRet.py, `❗ 인지 (t=${tRet.toFixed(1)})`, "#eab308", "top");
 
             const tEarthInt = -40 * v + 15 / gamma;
             const tDragonInt = 40 * v + 15 / gamma;
             const pEarthInt = getPt(-40, tEarthInt);
             const pDragonInt = getPt(40, tDragonInt);
 
-            p2BlockCtx.strokeStyle = '#ef4444'; p2BlockCtx.lineWidth = 3;
+            // 동시성선: 흰색 점선 (#ffffff, dashed)
+            p2BlockCtx.strokeStyle = '#ffffff'; p2BlockCtx.lineWidth = 3; p2BlockCtx.setLineDash([6, 4]);
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pEarthInt.px, pEarthInt.py); p2BlockCtx.lineTo(pDragonInt.px, pDragonInt.py); p2BlockCtx.stroke();
+            p2BlockCtx.setLineDash([]);
 
             p2_drawPointMarker(p2BlockCtx, pEarthInt.px, pEarthInt.py, `🌋 (t=${tEarthInt.toFixed(1)}μs)`, "#f59e0b", "top");
             p2_drawPointMarker(p2BlockCtx, pDragonInt.px, pDragonInt.py, `👓🐉 (t=${tDragonInt.toFixed(1)}μs)`, "#a7f3d0", "top");
 
-            p2BlockCtx.fillStyle = '#fca5a5'; p2BlockCtx.font = 'bold 13px Jua'; p2BlockCtx.textAlign = 'left';
+            p2BlockCtx.fillStyle = '#ffffff'; p2BlockCtx.font = 'bold 13px Jua'; p2BlockCtx.textAlign = 'left';
             p2BlockCtx.fillText("⚡ 빨강이 동시성선 (기울기 v)", pDragonInt.px + 10, pDragonInt.py + 4);
 
             let pNowL = getPt(-55, currentTime), pNowR = getPt(55, currentTime);
