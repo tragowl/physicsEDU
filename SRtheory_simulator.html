@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>동시성의 상대성 & 블록 유니버스 시뮬레이터</title>
+    <title>동시성의 상대성 & 블록 유니버스 시뮬레이터 </title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@300;400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     
@@ -122,7 +122,7 @@
             <!-- Phase Switcher Tabs -->
             <div class="flex gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
                 <button id="tab-phase1" class="phase-tab active-phase px-4 py-2 rounded-lg title-font text-lg border border-transparent">
-                    Phase 1: 동시성의 상대성 (10km 우주선)
+                    Phase 1: 동시성의 상대성 (30km 우주선)
                 </button>
                 <button id="tab-phase2" class="phase-tab px-4 py-2 bg-slate-800 text-slate-400 hover:text-white rounded-lg title-font text-lg border border-slate-700">
                     Phase 2: 과거·현재·미래 & 블록 유니버스 ✨
@@ -169,9 +169,9 @@
                 </button>
             </div>
 
-            <!-- Toggle Celestial Objects (Earth & Dragon) Button -->
+            <!-- Toggle Celestial Objects Button -->
             <button id="btn-toggle-celestial" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl title-font text-xl border-2 border-slate-600 transition flex items-center gap-2">
-                <span>🌍 지구 & 🐉 녹색이 표시</span>
+                <span>🌍 외부환경 표시</span>
                 <span id="celestial-status-tag" class="text-sm bg-slate-900 px-2 py-0.5 rounded border border-slate-700 text-slate-400">OFF</span>
             </button>
 
@@ -188,7 +188,7 @@
                 </div>
             </div>
 
-            <!-- Fire & Reset Action Buttons -->
+            <!-- Action Buttons -->
             <div class="flex gap-3">
                 <button id="btn-fire" class="px-6 py-4 bg-gradient-to-b from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-black font-bold rounded-xl title-font text-3xl shadow-[0_0_15px_rgba(245,158,11,0.5)] transition transform active:scale-95">
                     ⚡ 발사!
@@ -219,7 +219,7 @@
         <div class="bg-slate-900 border-b border-slate-800 px-6 py-2.5 flex justify-between items-center gap-4">
             <div class="flex items-center gap-2 bg-purple-950/80 px-4 py-1.5 rounded-xl border border-purple-600/50 shadow">
                 <span class="text-xl">🧊</span>
-                <span class="title-font text-lg text-purple-200">블록 유니버스 (4D 시공간)</span>
+                <span class="title-font text-lg text-purple-200">블록 유니버스 (4D 시공간 - 30km 우주선)</span>
             </div>
 
             <!-- Observer Selector -->
@@ -242,8 +242,8 @@
             <!-- Time Scrubber Slider -->
             <div class="flex items-center gap-3 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
                 <span class="title-font text-slate-300 text-sm" id="p2-time-label">시간 (t):</span>
-                <input type="range" id="p2-time-slider" min="-25" max="35" step="0.2" value="5" class="w-36">
-                <span id="p2-time-disp" class="mono-font text-emerald-400 text-sm font-bold w-16">5.00 μs</span>
+                <input type="range" id="p2-time-slider" min="-25" max="50" step="0.5" value="15" class="w-36">
+                <span id="p2-time-disp" class="mono-font text-emerald-400 text-sm font-bold w-16">15.00 μs</span>
             </div>
         </div>
 
@@ -259,7 +259,7 @@
                     💡 핵심 물리 인사이트
                 </span>
                 <p id="p2-banner-text" class="text-slate-200 title-font text-base">
-                    파랑이 관점에서는 A와 B의 피격 사건을 잇는 직선이 기울어져 있으며, 지구의 먼 과거와 녹색이의 먼 미래와 만납니다!
+                    파랑이 관점에서는 A와 B의 피격 사건을 잇는 직선이 기울어져 있으며, 우주선의 길이 30km 확장에 따라 시간격 및 세계선 분리가 훨씬 선명하게 나타납니다!
                 </p>
             </div>
             <div class="flex gap-4 mono-font text-xs text-slate-400">
@@ -274,12 +274,12 @@
     <div id="modal-data" class="modal-overlay">
         <div class="bg-slate-800 p-8 rounded-2xl border border-slate-600 shadow-2xl min-w-[400px] relative">
             <button class="close-modal absolute top-4 right-6 text-4xl text-slate-400 hover:text-white">&times;</button>
-            <h2 class="title-font text-3xl text-emerald-400 mb-6 border-b border-slate-600 pb-2">📊 상대론적 물리량 상세 정보</h2>
+            <h2 class="title-font text-3xl text-emerald-400 mb-6 border-b border-slate-600 pb-2">📊 상대론적 물리량 상세 정보 (L = 30km)</h2>
             
             <div class="mono-font text-lg flex flex-col gap-3">
                 <div class="flex justify-between bg-slate-900 p-2 rounded"><span>속도 v :</span> <span id="val-v" class="text-blue-400 font-bold">0.50 c</span></div>
                 <div class="flex justify-between bg-slate-900 p-2 rounded"><span>로런츠 인자 γ :</span> <span id="val-gamma" class="text-yellow-400 font-bold">1.155</span></div>
-                <div class="flex justify-between bg-slate-900 p-2 rounded"><span class="text-cyan-400">우주선 관측 길이 (L') :</span> <span id="val-ship-len" class="text-cyan-300 font-bold">8.66 km</span></div>
+                <div class="flex justify-between bg-slate-900 p-2 rounded"><span class="text-cyan-400">우주선 관측 길이 (L') :</span> <span id="val-ship-len" class="text-cyan-300 font-bold">25.98 km</span></div>
                 <hr class="border-slate-600 my-2">
                 <div class="text-sm text-slate-400 mb-1">현재 선택된 관점 기준 시간 (발사 = 0.00 μs)</div>
                 <div class="flex justify-between bg-slate-900 p-2 rounded"><span class="text-red-400">A 피격 시간 (t_A) :</span> <span id="val-ta" class="font-bold">--</span></div>
@@ -294,7 +294,7 @@
     <div id="modal-minkowski" class="modal-overlay p-4 sm:p-6">
         <div class="w-full h-full max-w-[96vw] max-h-[92vh] bg-slate-900 rounded-2xl border border-slate-600 shadow-2xl flex flex-col overflow-hidden relative">
             <div class="flex justify-between items-center px-6 py-3.5 border-b border-slate-700 bg-slate-800 shrink-0">
-                <h2 class="title-font text-2xl sm:text-3xl text-purple-400">📈 시공간 도표 (Minkowski Diagram - Phase 1)</h2>
+                <h2 class="title-font text-2xl sm:text-3xl text-purple-400">📈 시공간 도표 (Minkowski Diagram - L = 30km)</h2>
                 <div class="flex gap-4 items-center">
                     <span class="text-slate-300 text-base sm:text-lg">현재 속도: <span id="mink-v-disp" class="font-mono text-yellow-400 font-bold">0.50c</span></span>
                     <button class="close-modal text-3xl sm:text-4xl text-slate-400 hover:text-white leading-none">&times;</button>
@@ -339,7 +339,7 @@
             this.lineTo(x + w - tr, y);
             this.quadraticCurveTo(x + w, y, x + w, y + tr);
             this.lineTo(x + w, y + h - br);
-            this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+            this.quadraticCurveTo(x + w, y, x + w - br, y + h);
             this.lineTo(x + bl, y + h);
             this.quadraticCurveTo(x, y + h, x, y + h - bl);
             this.lineTo(x, y + tl);
@@ -349,9 +349,9 @@
         };
     }
 
-    /* Core Constants & State */
+    /* Core Physics Constants & State */
     const C = 1; 
-    const L = 10; // 우주선 고유 길이 (10km)
+    const L = 30; // 우주선 고유 길이 (30km 로 확장)
     const TIME_MULTIPLIER = 3.33; // 표시용 마이크로초 환산 스케일
 
     let activePhase = 1; 
@@ -366,19 +366,19 @@
         events: {
             A: { hit: false, t_red: 0, x_red: 0, t_blue: 0, x_blue: 0, hitScreenX: null, hitScreenY: null },
             B: { hit: false, t_red: 0, x_red: 0, t_blue: 0, x_blue: 0, hitScreenX: null, hitScreenY: null },
-            Return: { received: false, t_red: 10, t_blue: 10, hitScreenX: null, hitScreenY: null }
+            Return: { received: false, t_red: 30, t_blue: 30, hitScreenX: null, hitScreenY: null }
         }
     };
 
     function calculatePhysics() {
         state.gamma = 1 / Math.sqrt(1 - state.v * state.v);
         
-        // 빨강이 좌표계 (S')
-        const t_prime_A = L / 2; 
-        const x_prime_A = -L / 2; 
-        const t_prime_B = L / 2; 
-        const x_prime_B = L / 2; 
-        const t_prime_ret = 10;
+        // 빨강이 좌표계 (S') - 우주선 길이 30km 적용 (A는 -15km, B는 +15km)
+        const t_prime_A = L / 2; // 15
+        const x_prime_A = -L / 2; // -15
+        const t_prime_B = L / 2; // 15
+        const x_prime_B = L / 2; // 15
+        const t_prime_ret = L; // 30 (중앙으로 귀환)
 
         state.events.A.t_red = t_prime_A;
         state.events.A.x_red = x_prime_A;
@@ -442,7 +442,6 @@
         document.getElementById('val-tret').textContent = formatTime(tRet);
     }
 
-    /* Modals & UI Event Listeners */
     document.getElementById('btn-show-data').addEventListener('click', () => {
         document.getElementById('modal-data').classList.add('active');
     });
@@ -593,16 +592,16 @@
     function getEarthStageInfo(t) {
         if (t < -15) return { icon: "🌋", label: "용암 바다", sub: "원시 지구" };
         if (t < 0)   return { icon: "🌊", label: "원시 바다", sub: "단세포 생물" };
-        if (t < 12)  return { icon: "🦖", label: "공룡 시대", sub: "거대 공룡" };
-        if (t < 25)  return { icon: "🏛️", label: "인류 문명", sub: "고대 도시" };
+        if (t < 15)  return { icon: "🦖", label: "공룡 시대", sub: "거대 공룡" };
+        if (t < 35)  return { icon: "🏛️", label: "인류 문명", sub: "고대 도시" };
         return { icon: "🏙️", label: "미래 도시", sub: "첨단 문명" };
     }
 
     function getDragonStageInfo(t) {
         if (t < -15) return { icon: "🥚", label: "드래곤 알", sub: "부화 전" };
         if (t < 0)   return { icon: "🐣", label: "아기 드래곤", sub: "유년기" };
-        if (t < 12)  return { icon: "🐉", label: "성체 드래곤", sub: "전성기" };
-        if (t < 25)  return { icon: "👓🐉", label: "노년 드래곤", sub: "노년기" };
+        if (t < 15)  return { icon: "🐉", label: "성체 드래곤", sub: "전성기" };
+        if (t < 35)  return { icon: "👓🐉", label: "노년 드래곤", sub: "노년기" };
         return { icon: "💀🐉", label: "별이 됨", sub: "전설 속으로" };
     }
 
@@ -623,11 +622,11 @@
         
         let span, offsetX, pixelsPerKm;
         if (state.showEarthDragon) {
-            span = 40; 
+            span = 100; // 30km 우주선에 맞춰 스판 확장
             pixelsPerKm = (W * 0.85) / span;
             offsetX = W / 2;
         } else {
-            span = 22; 
+            span = 50; 
             pixelsPerKm = (W * 0.82) / span;
             offsetX = W / 2;
         }
@@ -648,8 +647,10 @@
         let tB = state.view === 'red' ? state.events.B.t_red : state.events.B.t_blue;
         let tRet = state.view === 'red' ? state.events.Return.t_red : state.events.Return.t_blue;
 
+        const halfL = L / 2; // 15km
+
         if (state.view === 'red') {
-            shipCenter = 0; shipLeft = -5; shipRight = 5;
+            shipCenter = 0; shipLeft = -halfL; shipRight = halfL;
         } else {
             const L_obs = L / state.gamma;
             shipCenter = state.v * t;
@@ -659,8 +660,8 @@
 
         /* Earth & Dragon rendering */
         if (state.showEarthDragon) {
-            const xEarth_blue = -15.5;
-            const xDragon_blue = 15.5;
+            const xEarth_blue = -40.0;
+            const xDragon_blue = 40.0;
 
             let xEarth, xDragon, tEarth, tDragon;
 
@@ -775,7 +776,6 @@
         ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 13px Jua'; ctx.textAlign = 'center';
         ctx.fillText(`📐 우주선 관측 길이: ${obsLenKm.toFixed(2)} km ${state.view === 'blue' ? '(길이 수축 L/γ)' : '(고유 길이 L)'}`, pxShipCenter, cy - shipHeight/2 + 20);
 
-        // Laser Light Pulses
         if (t > 0) {
             if (t <= tA) {
                 const laserX = -t; 
@@ -785,7 +785,7 @@
                 if (pxTail > pxOrigin) pxTail = pxOrigin;
                 drawPulse(ctx, pxTail, laserY, pxLaser, laserY, '#eab308', false);
             } else if (t > tA && t <= tRet) {
-                const xA = state.view === 'red' ? -5 : state.events.A.x_blue;
+                const xA = state.view === 'red' ? -halfL : state.events.A.x_blue;
                 const retX = xA + (t - tA);
                 const pxRet = offsetX + retX * pixelsPerKm;
                 const pxOrigin = offsetX + xA * pixelsPerKm;
@@ -802,7 +802,7 @@
                 if (pxTail < pxOrigin) pxTail = pxOrigin;
                 drawPulse(ctx, pxTail, laserY, pxLaser, laserY, '#eab308', false);
             } else if (t > tB && t <= tRet) {
-                const xB = state.view === 'red' ? 5 : state.events.B.x_blue;
+                const xB = state.view === 'red' ? halfL : state.events.B.x_blue;
                 const retX = xB - (t - tB); 
                 const pxRet = offsetX + retX * pixelsPerKm;
                 const pxOrigin = offsetX + xB * pixelsPerKm;
@@ -852,7 +852,7 @@
             }
             showEventOverlay('center', state.events.Return.hitScreenX, state.events.Return.hitScreenY);
             
-            if (state.status === 'playing' && t > tRet + 2) {
+            if (state.status === 'playing' && t > tRet + 4) {
                 state.status = 'idle'; 
             }
         } else {
@@ -898,7 +898,7 @@
         lastTime = timestamp;
 
         if (activePhase === 1 && state.status === 'playing') {
-            state.simTime += dt * 3.0; 
+            state.simTime += dt * 5.0; // 애니메이션 이동 속도 튜닝
             drawSimulation();
         }
         animId = requestAnimationFrame(loop);
@@ -925,8 +925,9 @@
             ctx.clearRect(0, 0, W, H);
             
             const hasCelestials = state.showEarthDragon;
-            const maxT = isRed ? 12 : Math.max(12, 10 * state.gamma + 1.5);
-            const maxX_abs = hasCelestials ? 18.0 : 8.5;
+            const halfL = L / 2; // 15
+            const maxT = isRed ? 35 : Math.max(35, L * state.gamma + 5);
+            const maxX_abs = hasCelestials ? 48.0 : 25.0;
             
             const paddingX = 50;
             const paddingY = 50;
@@ -935,7 +936,6 @@
             const scaleX = scale;
             const scaleT = scale;
             
-            // 수직 중앙 정렬 배치 계산
             const diagramHeight = maxT * scaleT;
             const originY = Math.min(H - 25, (H + diagramHeight) / 2 + 10);
             const originX = W / 2;
@@ -943,11 +943,11 @@
             const getPt = (x, t) => ({ px: originX + x * scaleX, py: originY - t * scaleT });
 
             ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
-            for(let i=0; i<=maxT; i+=2) {
+            for(let i=0; i<=maxT; i+=5) {
                 let py = originY - i*scaleT;
                 ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(W, py); ctx.stroke();
             }
-            for(let i=-Math.ceil(maxX_abs); i<=Math.ceil(maxX_abs); i+=2) {
+            for(let i=-Math.ceil(maxX_abs); i<=Math.ceil(maxX_abs); i+=10) {
                 let px = originX + i*scaleX;
                 ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, H); ctx.stroke();
             }
@@ -969,8 +969,8 @@
             };
 
             if (hasCelestials) {
-                const xEarth_blue = -15.5;
-                const xDragon_blue = 15.5;
+                const xEarth_blue = -40.0;
+                const xDragon_blue = 40.0;
 
                 if (isRed) {
                     const xEarth_red0 = xEarth_blue / state.gamma;
@@ -994,31 +994,31 @@
             let pA, pB, pRet;
 
             if (isRed) {
-                pA = getPt(-5, 5);
-                pB = getPt(5, 5);
-                pRet = getPt(0, 10);
+                pA = getPt(-halfL, halfL);
+                pB = getPt(halfL, halfL);
+                pRet = getPt(0, L);
                 
-                drawLine(getPt(-5,0), getPt(-5, maxT), '#22c55e', 2, [5,5]); 
-                drawLine(getPt(5,0), getPt(5, maxT), '#22c55e', 2, [5,5]); 
+                drawLine(getPt(-halfL,0), getPt(-halfL, maxT), '#22c55e', 2, [5,5]); 
+                drawLine(getPt(halfL,0), getPt(halfL, maxT), '#22c55e', 2, [5,5]); 
                 drawLine(O, getPt(0, maxT), '#ef4444', 2, [5,5]); 
             } else {
                 const invG = 1/state.gamma;
                 const v = state.v;
 
-                const tA = state.gamma * (5 - 5*v);
+                const tA = state.gamma * (halfL - halfL*v);
                 const xA = -tA; 
                 pA = getPt(xA, tA);
 
-                const tB = state.gamma * (5 + 5*v);
+                const tB = state.gamma * (halfL + halfL*v);
                 const xB = tB; 
                 pB = getPt(xB, tB);
 
-                const tRet = 10 * state.gamma;
-                const xRet = 10 * state.gamma * v;
+                const tRet = L * state.gamma;
+                const xRet = L * state.gamma * v;
                 pRet = getPt(xRet, tRet);
 
-                drawLine(getPt(-5*invG, 0), getPt(-5*invG + v*maxT, maxT), '#22c55e', 2, [5,5]);
-                drawLine(getPt(5*invG, 0), getPt(5*invG + v*maxT, maxT), '#22c55e', 2, [5,5]);
+                drawLine(getPt(-halfL*invG, 0), getPt(-halfL*invG + v*maxT, maxT), '#22c55e', 2, [5,5]);
+                drawLine(getPt(halfL*invG, 0), getPt(halfL*invG + v*maxT, maxT), '#22c55e', 2, [5,5]);
                 drawLine(O, getPt(v*maxT, maxT), '#ef4444', 2, [5,5]);
             }
 
@@ -1027,37 +1027,37 @@
             drawLine(pA, pRet, '#06b6d4', 3, [5,5]); 
             drawLine(pB, pRet, '#06b6d4', 3, [5,5]); 
             
-            // 빨강이의 동시선 (A·B 피격 사건을 포함하며 지구와 녹색이별 위치까지 길게 연장)
+            // 빨강이의 동시선 (A·B 피격 사건 t'=15 μs 연결)
             if (hasCelestials) {
-                const xEarth_blue = -15.5;
-                const xDragon_blue = 15.5;
+                const xEarth_blue = -40.0;
+                const xDragon_blue = 40.0;
                 if (isRed) {
-                    const xEarth_at_t5 = (xEarth_blue / state.gamma) - state.v * 5;
-                    const xDragon_at_t5 = (xDragon_blue / state.gamma) - state.v * 5;
-                    const pSimStart = getPt(xEarth_at_t5, 5);
-                    const pSimEnd = getPt(xDragon_at_t5, 5);
+                    const xEarth_at_t15 = (xEarth_blue / state.gamma) - state.v * halfL;
+                    const xDragon_at_t15 = (xDragon_blue / state.gamma) - state.v * halfL;
+                    const pSimStart = getPt(xEarth_at_t15, halfL);
+                    const pSimEnd = getPt(xDragon_at_t15, halfL);
                     drawLine(pSimStart, pSimEnd, '#ffffff', 2.5, [6, 4]);
                     ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px Jua'; ctx.textAlign = 'center';
-                    ctx.fillText("⚡ 동시선 (t'=5 μs)", (pSimStart.px + pSimEnd.px)/2, pSimStart.py - 10);
+                    ctx.fillText("⚡ 동시선 (t'=15 μs)", (pSimStart.px + pSimEnd.px)/2, pSimStart.py - 10);
                 } else {
-                    const tEarth_at_t5 = state.v * xEarth_blue + 5 / state.gamma;
-                    const tDragon_at_t5 = state.v * xDragon_blue + 5 / state.gamma;
-                    const pSimStart = getPt(xEarth_blue, tEarth_at_t5);
-                    const pSimEnd = getPt(xDragon_blue, tDragon_at_t5);
+                    const tEarth_at_t15 = state.v * xEarth_blue + halfL / state.gamma;
+                    const tDragon_at_t15 = state.v * xDragon_blue + halfL / state.gamma;
+                    const pSimStart = getPt(xEarth_blue, tEarth_at_t15);
+                    const pSimEnd = getPt(xDragon_blue, tDragon_at_t15);
                     drawLine(pSimStart, pSimEnd, '#ffffff', 2.5, [6, 4]);
                     ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px Jua'; ctx.textAlign = 'center';
                     ctx.fillText("⚡ 빨강이 동시선 (기울기 v)", (pSimStart.px + pSimEnd.px)/2, (pSimStart.py + pSimEnd.py)/2 - 12);
                 }
             } else {
                 if (isRed) {
-                    const pL = getPt(-maxX_abs + 1.5, 5);
-                    const pR = getPt(maxX_abs - 1.5, 5);
+                    const pL = getPt(-maxX_abs + 2, halfL);
+                    const pR = getPt(maxX_abs - 2, halfL);
                     drawLine(pL, pR, '#ffffff', 2, [4, 4]);
                 } else {
-                    const xL = -maxX_abs + 1.5;
-                    const xR = maxX_abs - 1.5;
-                    const tL = state.v * xL + 5 / state.gamma;
-                    const tR = state.v * xR + 5 / state.gamma;
+                    const xL = -maxX_abs + 2;
+                    const xR = maxX_abs - 2;
+                    const tL = state.v * xL + halfL / state.gamma;
+                    const tR = state.v * xR + halfL / state.gamma;
                     drawLine(getPt(xL, tL), getPt(xR, tR), '#ffffff', 2, [4, 4]);
                 }
             }
@@ -1075,30 +1075,30 @@
     let p2State = {
         v: 0.50,
         view: 'blue', 
-        time: 5.0, 
+        time: 15.0, 
         xEarth_blue: -40.0,
         xDragon_blue: 40.0,
         xShip_red: 0.0,
-        xA_red: -5.0,
-        xB_red: 5.0,
+        xA_red: -15.0,
+        xB_red: 15.0,
         tMin: -25,
-        tMax: 35
+        tMax: 50
     };
 
     const EARTH_STAGES = [
         { t: -25, label: "원시 지구", icon: "🌋", desc: "용암 바다" },
-        { t: -10, label: "원시 바다", icon: "🌊", desc: "단세포 생물" },
-        { t: 5.0, label: "공룡 시대", icon: "🦖", desc: "거대 공룡" },
-        { t: 20.0, label: "인류 문명", icon: "🏛️", desc: "고대 도시 문명" },
-        { t: 35.0, label: "미래 도시", icon: "🏙️", desc: "첨단 미래 문명" }
+        { t: -5, label: "원시 바다", icon: "🌊", desc: "단세포 생물" },
+        { t: 15.0, label: "공룡 시대", icon: "🦖", desc: "거대 공룡" },
+        { t: 35.0, label: "인류 문명", icon: "🏛️", desc: "고대 도시 문명" },
+        { t: 50.0, label: "미래 도시", icon: "🏙️", desc: "첨단 미래 문명" }
     ];
 
     const DRAGON_STAGES = [
         { t: -25, label: "드래곤 알", icon: "🥚", desc: "알 속 잠자는 드래곤" },
-        { t: -10, label: "아기 드래곤", icon: "🐣", desc: "갓 부화한 아기" },
-        { t: 5.0, label: "성체 드래곤", icon: "🐉", desc: "위엄 있는 성체" },
-        { t: 20.0, label: "노년 드래곤", icon: "👓🐉", desc: "늙은 드래곤" },
-        { t: 35.0, label: "별이 됨", icon: "💀🐉", desc: "시공간 속 전설" }
+        { t: -5, label: "아기 드래곤", icon: "🐣", desc: "갓 부화한 아기" },
+        { t: 15.0, label: "성체 드래곤", icon: "🐉", desc: "위엄 있는 성체" },
+        { t: 35.0, label: "노년 드래곤", icon: "👓🐉", desc: "늙은 드래곤" },
+        { t: 50.0, label: "별이 됨", icon: "💀🐉", desc: "시공간 속 전설" }
     ];
 
     function p2_calculatePhysics() {
@@ -1167,11 +1167,11 @@
         const gamma = 1 / Math.sqrt(1 - v*v);
 
         if (p2State.view === 'red') {
-            banner.innerHTML = `<span class="text-red-400 font-bold">🔴 빨강이 관점 (우주선 정지계):</span> A/B 피격을 잇는 동시성선은 수평선(t'=5 μs)이며, <span class="text-emerald-400 font-bold">지구 공룡시대(🦖)</span> 및 <span class="text-emerald-400 font-bold">녹색이 성체(🐉)</span>와 정확히 동시에 만납니다.`;
+            banner.innerHTML = `<span class="text-red-400 font-bold">🔴 빨강이 관점 (우주선 정지계):</span> A/B 피격을 잇는 동시성선은 수평선(t'=15 μs)이며, <span class="text-emerald-400 font-bold">지구 공룡시대(🦖)</span> 및 <span class="text-emerald-400 font-bold">녹색이 성체(🐉)</span>와 정확히 동시에 만납니다.`;
         } else {
-            const tEarthInt = -40 * v + 5 / gamma;
-            const tDragonInt = 40 * v + 5 / gamma;
-            banner.innerHTML = `<span class="text-blue-400 font-bold">🔵 파랑이 관점 (지구/외부 정지계):</span> A/B 피격을 잇는 직선(기울기 v=${v.toFixed(2)})을 연장하면 <span class="text-amber-400 font-bold">지구의 먼 과거 (t=${tEarthInt.toFixed(1)}μs, 원시지구🌋)</span> 및 <span class="text-cyan-400 font-bold">녹색이의 먼 미래 (t=${tDragonInt.toFixed(1)}μs, 노년👓🐉)</span>와 만납니다!`;
+            const tEarthInt = -40 * v + 15 / gamma;
+            const tDragonInt = 40 * v + 15 / gamma;
+            banner.innerHTML = `<span class="text-blue-400 font-bold">🔵 파랑이 관점 (지구/외부 정지계):</span> A/B 피격을 잇는 직선(기울기 v=${v.toFixed(2)})을 연장하면 <span class="text-amber-400 font-bold">지구의 과거 (t=${tEarthInt.toFixed(1)}μs)</span> 및 <span class="text-cyan-400 font-bold">녹색이의 미래 (t=${tDragonInt.toFixed(1)}μs)</span>와 만납니다!`;
         }
     }
 
@@ -1196,10 +1196,9 @@
         p2BlockCtx.roundRect(blockX, blockY, blockW, blockH, 16);
         p2BlockCtx.fill(); p2BlockCtx.stroke();
 
-        // Diagram Title & Legend
         p2BlockCtx.fillStyle = '#a855f7'; p2BlockCtx.font = 'bold 18px Jua'; p2BlockCtx.textAlign = 'left';
         p2BlockCtx.fillText(
-            isRed ? "🧊 빨강이 관점 4D 블록 유니버스 (c=1, 광선 45°)" : "🔵 파랑이 관점 4D 블록 유니버스 (c=1, 광선 45°)",
+            isRed ? "🧊 빨강이 관점 4D 블록 유니버스 (L=30km)" : "🔵 파랑이 관점 4D 블록 유니버스 (L=30km)",
             blockX + 20, blockY - 12
         );
 
@@ -1212,8 +1211,8 @@
         const tMax = p2State.tMax; 
         const deltaT = tMax - tMin; 
 
-        const xMin = -50;
-        const xMax = 50;
+        const xMin = -60;
+        const xMax = 60;
         const deltaX = xMax - xMin; 
 
         const scale = Math.min(blockW / deltaX, blockH / deltaT);
@@ -1228,11 +1227,11 @@
 
         // Background Spacetime Grid
         p2BlockCtx.strokeStyle = '#1e293b'; p2BlockCtx.lineWidth = 1;
-        for(let x = -40; x <= 40; x += 10) {
+        for(let x = -50; x <= 50; x += 10) {
             let p1 = getPt(x, tMin), p2 = getPt(x, tMax);
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(p1.px, p1.py); p2BlockCtx.lineTo(p2.px, p2.py); p2BlockCtx.stroke();
         }
-        for(let t = -20; t <= 30; t += 10) {
+        for(let t = -20; t <= 40; t += 10) {
             let p1 = getPt(xMin, t), p2 = getPt(xMax, t);
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(p1.px, p1.py); p2BlockCtx.lineTo(p2.px, p2.py); p2BlockCtx.stroke();
             p2BlockCtx.fillStyle = '#64748b'; p2BlockCtx.font = 'bold 12px Jua'; p2BlockCtx.textAlign = 'right';
@@ -1241,11 +1240,11 @@
 
         if (isRed) {
             const pCenter0 = getPt(0, 0);
-            const pA_hit = getPt(-5, 5);
-            const pB_hit = getPt(5, 5);
-            const pRet = getPt(0, 10);
+            const pA_hit = getPt(-15, 15);
+            const pB_hit = getPt(15, 15);
+            const pRet = getPt(0, 30);
 
-            [-5, 0, 5].forEach((x, idx) => {
+            [-15, 0, 15].forEach((x, idx) => {
                 let pBot = getPt(x, tMin), pTop = getPt(x, tMax);
                 p2BlockCtx.strokeStyle = idx === 1 ? '#f59e0b' : '#ef4444';
                 p2BlockCtx.lineWidth = 3;
@@ -1287,17 +1286,17 @@
             p2BlockCtx.setLineDash([]);
 
             p2_drawPointMarker(p2BlockCtx, pCenter0.px, pCenter0.py, "⚡ 발사 (t'=0)", "#eab308", "bottom");
-            p2_drawPointMarker(p2BlockCtx, pA_hit.px, pA_hit.py, "💥 A 피격", "#ef4444", "top");
-            p2_drawPointMarker(p2BlockCtx, pB_hit.px, pB_hit.py, "💥 B 피격", "#ef4444", "top");
-            p2_drawPointMarker(p2BlockCtx, pRet.px, pRet.py, "❗ 죽음 인지 (t'=10)", "#06b6d4", "top");
+            p2_drawPointMarker(p2BlockCtx, pA_hit.px, pA_hit.py, "💥 A (t'=15)", "#ef4444", "top");
+            p2_drawPointMarker(p2BlockCtx, pB_hit.px, pB_hit.py, "💥 B (t'=15)", "#ef4444", "top");
+            p2_drawPointMarker(p2BlockCtx, pRet.px, pRet.py, "❗ 인지 (t'=30)", "#06b6d4", "top");
 
-            let pL = getPt(-45, 5), pR = getPt(45, 5);
+            let pL = getPt(-55, 15), pR = getPt(55, 15);
             p2BlockCtx.strokeStyle = '#ef4444'; p2BlockCtx.lineWidth = 2.5;
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pL.px, pL.py); p2BlockCtx.lineTo(pR.px, pR.py); p2BlockCtx.stroke();
             p2BlockCtx.fillStyle = '#fca5a5'; p2BlockCtx.font = 'bold 13px Jua'; p2BlockCtx.textAlign = 'right';
-            p2BlockCtx.fillText("⚡ 동시성선 (t'=5 μs)", pR.px, pR.py - 6);
+            p2BlockCtx.fillText("⚡ 동시성선 (t'=15 μs)", pR.px, pR.py - 6);
 
-            let pNowL = getPt(-45, currentTime), pNowR = getPt(45, currentTime);
+            let pNowL = getPt(-55, currentTime), pNowR = getPt(55, currentTime);
             p2BlockCtx.strokeStyle = '#f87171'; p2BlockCtx.lineWidth = 2; p2BlockCtx.setLineDash([6, 4]);
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pNowL.px, pNowL.py); p2BlockCtx.lineTo(pNowR.px, pNowR.py); p2BlockCtx.stroke();
             p2BlockCtx.setLineDash([]);
@@ -1332,22 +1331,22 @@
                 }
                 p2BlockCtx.stroke();
             };
-            drawMovingShipPart(-5, '#ef4444');
+            drawMovingShipPart(-15, '#ef4444');
             drawMovingShipPart(0, '#f59e0b');
-            drawMovingShipPart(5, '#ef4444');
+            drawMovingShipPart(15, '#ef4444');
 
             const pLaunch = getPt(0, 0);
 
-            const tA = gamma * (5 - 5*v);
+            const tA = gamma * (15 - 15*v);
             const xA = -tA; 
             const pA_hit = getPt(xA, tA);
 
-            const tB = gamma * (5 + 5*v);
+            const tB = gamma * (15 + 15*v);
             const xB = tB; 
             const pB_hit = getPt(xB, tB);
 
-            const tRet = 10 * gamma;
-            const xRet = 10 * gamma * v;
+            const tRet = 30 * gamma;
+            const xRet = 30 * gamma * v;
             const pRet = getPt(xRet, tRet);
 
             p2BlockCtx.strokeStyle = '#eab308'; p2BlockCtx.lineWidth = 3;
@@ -1362,10 +1361,10 @@
             p2_drawPointMarker(p2BlockCtx, pLaunch.px, pLaunch.py, "⚡ 발사 (t=0)", "#eab308", "bottom");
             p2_drawPointMarker(p2BlockCtx, pA_hit.px, pA_hit.py, `💥 A (t=${tA.toFixed(1)})`, "#ef4444", "bottom");
             p2_drawPointMarker(p2BlockCtx, pB_hit.px, pB_hit.py, `💥 B (t=${tB.toFixed(1)})`, "#ef4444", "top");
-            p2_drawPointMarker(p2BlockCtx, pRet.px, pRet.py, `❗ 죽음 인지 (t=${tRet.toFixed(1)})`, "#06b6d4", "top");
+            p2_drawPointMarker(p2BlockCtx, pRet.px, pRet.py, `❗ 인지 (t=${tRet.toFixed(1)})`, "#06b6d4", "top");
 
-            const tEarthInt = -40 * v + 5 / gamma;
-            const tDragonInt = 40 * v + 5 / gamma;
+            const tEarthInt = -40 * v + 15 / gamma;
+            const tDragonInt = 40 * v + 15 / gamma;
             const pEarthInt = getPt(-40, tEarthInt);
             const pDragonInt = getPt(40, tDragonInt);
 
@@ -1378,7 +1377,7 @@
             p2BlockCtx.fillStyle = '#fca5a5'; p2BlockCtx.font = 'bold 13px Jua'; p2BlockCtx.textAlign = 'left';
             p2BlockCtx.fillText("⚡ 빨강이 동시성선 (기울기 v)", pDragonInt.px + 10, pDragonInt.py + 4);
 
-            let pNowL = getPt(-45, currentTime), pNowR = getPt(45, currentTime);
+            let pNowL = getPt(-55, currentTime), pNowR = getPt(55, currentTime);
             p2BlockCtx.strokeStyle = '#3b82f6'; p2BlockCtx.lineWidth = 2; p2BlockCtx.setLineDash([6, 4]);
             p2BlockCtx.beginPath(); p2BlockCtx.moveTo(pNowL.px, pNowL.py); p2BlockCtx.lineTo(pNowR.px, pNowR.py); p2BlockCtx.stroke();
             p2BlockCtx.setLineDash([]);
