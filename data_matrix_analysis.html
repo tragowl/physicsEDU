@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full bg-slate-200 text-slate-800">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>투명한 물리학</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Three.js (3D Graphics) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- KaTeX for Math Formatting -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brandRed: '#e16161',
+            brandGreen: '#2fb383',
+            brandBlue: '#4f83e0',
+            brandYellow: '#eab308',
+            brandPurple: '#8b5cf6',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #e2e8f0;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    .matrix-cell {
+      transition: all 0.2s ease;
+    }
+    .matrix-cell:hover {
+      transform: scale(1.04);
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col bg-slate-200/90 font-sans text-slate-800 overflow-hidden select-none">
+
+  <header class="h-20 border-b border-slate-300/80 bg-slate-100/95 backdrop-blur px-6 flex items-center justify-between z-20 shrink-0 shadow-sm">
+    <div class="flex items-center space-x-4">
+      <div class="p-3 bg-indigo-600 text-white rounded-2xl shadow-md shadow-indigo-500/20 flex items-center justify-center">
+        <i class="fa-solid fa-cubes-stacked text-2xl"></i>
+      </div>
+      <div>
+        <h1 class="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
+          데이터 관계성 시뮬레이터
+        </h1>
+        <p class="text-xs md:text-sm text-slate-600 font-semibold mt-0.5">단 하나의 공 세트로 배우는 벡터와 교차 분석</p>
+      </div>
+    </div>
+
+    <!-- Persistent Dataset Status & Controls -->
+    <div class="flex items-center space-x-3">
+      <button id="btnTogglePopup" class="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold text-xs md:text-sm rounded-xl flex items-center gap-2 transition-all shadow-sm active:scale-95">
+        <i class="fa-solid fa-window-restore text-indigo-600 text-base"></i>
+        <span>행렬 정보창</span>
+      </button>
+
+      <div class="bg-slate-200/80 border border-slate-300/80 px-4 py-2 rounded-xl text-xs md:text-sm flex items-center gap-3 shadow-inner">
+        <span class="text-slate-700 font-medium">현재 공 세트: <strong id="totalBallCountBadge" class="text-indigo-700 font-mono text-base font-bold">30</strong>개</span>
+        <span class="text-slate-300">|</span>
+        <span class="text-rose-600 font-mono font-bold">R:<span id="countRBadge">10</span></span>
+        <span class="text-emerald-700 font-mono font-bold">G:<span id="countGBadge">10</span></span>
+        <span class="text-sky-700 font-mono font-bold">B:<span id="countBBadge">10</span></span>
+      </div>
+
+      <button id="btnNewDataset" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs md:text-sm rounded-xl shadow-md shadow-indigo-600/20 flex items-center gap-2 transition-all active:scale-95">
+        <i class="fa-solid fa-rotate-right"></i>
+        새로운 공 세트 생성
+      </button>
+    </div>
+  </header>
+
+  <nav class="h-12 border-b border-slate-300/70 bg-slate-100 px-4 flex items-center justify-between text-xs z-20 shrink-0 overflow-x-auto">
+    <div class="flex items-center space-x-2" id="stepperContainer">
+      <!-- Steps rendered via JS -->
+    </div>
+
+    <div class="flex items-center space-x-2 shrink-0">
+      <button id="btnPrevStep" class="px-3.5 py-1 bg-white hover:bg-slate-50 disabled:opacity-40 text-slate-700 font-medium rounded-lg border border-slate-300 transition shadow-sm">
+        <i class="fa-solid fa-chevron-left mr-1"></i> 이전
+      </button>
+      <button id="btnNextStep" class="px-3.5 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-medium rounded-lg transition shadow-sm">
+        다음 <i class="fa-solid fa-chevron-right ml-1"></i>
+      </button>
+    </div>
+  </nav>
+
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- Center 3D Canvas Viewport -->
+    <div class="w-full h-full relative bg-slate-200 flex flex-col">
+      
+      <!-- 3D WebGL Canvas Container -->
+      <div id="canvas3DContainer" class="w-full h-full relative cursor-grab active:cursor-grabbing">
+        <canvas id="webglCanvas" class="w-full h-full block"></canvas>
+      </div>
+
+      <!-- Floating Draggable & Muted Matrix Information Popup -->
+      <div id="floatingVectorPopup" class="absolute top-8 right-8 z-30 bg-slate-50/95 backdrop-blur-xl border border-slate-300 rounded-2xl shadow-xl transition-opacity duration-200 opacity-0 pointer-events-none min-w-[420px] max-w-[520px]">
+        <!-- Popup Drag Header -->
+        <div id="popupHeader" class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between cursor-move bg-slate-100/90 rounded-t-2xl select-none">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-grip-dots-vertical text-slate-400"></i>
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+            <h4 id="popupTitle" class="text-xs font-bold text-slate-700 uppercase tracking-wider">수학적 표현 정보</h4>
+          </div>
+          <button id="btnClosePopup" class="w-7 h-7 rounded-lg bg-slate-200/80 hover:bg-slate-300 text-slate-600 hover:text-slate-900 flex items-center justify-center transition">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Popup Body -->
+        <div id="floatingVectorContent" class="p-6 max-h-[80vh] overflow-y-auto">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    const COLORS = {
+      RED: { 
+        id: 'RED', 
+        label: 'RED', 
+        rgb: 0xff2a2a, 
+        bg: 'bg-rose-100/80', 
+        border: 'border-rose-300', 
+        text: 'text-rose-700', 
+        badgeBg: 'bg-rose-600',
+        cellBg: 'bg-rose-100/50'
+      },
+      GREEN: { 
+        id: 'GREEN', 
+        label: 'GREEN', 
+        rgb: 0x00c853, 
+        bg: 'bg-emerald-100/80', 
+        border: 'border-emerald-300', 
+        text: 'text-emerald-700', 
+        badgeBg: 'bg-emerald-600',
+        cellBg: 'bg-emerald-100/50'
+      },
+      BLUE: { 
+        id: 'BLUE', 
+        label: 'BLUE', 
+        rgb: 0x2979ff, 
+        bg: 'bg-sky-100/80', 
+        border: 'border-sky-300', 
+        text: 'text-sky-700', 
+        badgeBg: 'bg-sky-600',
+        cellBg: 'bg-sky-100/50'
+      }
+    };
+
+    const SHAPES = {
+      SPHERE: { id: 'SPHERE', label: '구 (Sphere)', icon: '●', code: 'S' },
+      CUBE: { id: 'CUBE', label: '큐브 (Cube)', icon: '■', code: 'C' },
+      PYRAMID: { id: 'PYRAMID', label: '삼각뿔 (Pyramid)', icon: '▲', code: 'T' },
+      OCTAHEDRON: { id: 'OCTAHEDRON', label: '정팔면체 (Octahedron)', icon: '◆', code: 'O' }
+    };
+
+    const PHASES = [
+      {
+        id: 1,
+        title: "Phase 1: 무작위 공 세트 관찰",
+        subtitle: "화면에 생성된 실제 단 하나의 공 세트를 관찰합니다.",
+        desc: "공들은 고유한 ID, 색깔(Red, Green, Blue), 모양(Sphere, Cube, Pyramid, Octahedron)을 가진 개별 객체입니다."
+      },
+      {
+        id: 2,
+        title: "Phase 2: 색깔별 분류",
+        subtitle: "동일한 공들을 색깔 기준으로 이동시켜 분류합니다.",
+        desc: "동일한 공들이 RED, GREEN, BLUE 그룹으로 정렬됩니다. 각 색깔 그룹의 개수를 계산합니다."
+      },
+      {
+        id: 3,
+        title: "Phase 3: 모양별 분류",
+        subtitle: "이번에는 같은 공들을 모양 기준으로 다시 분류합니다.",
+        desc: "새로운 공을 만든 것이 아니라, 같은 공 세트를 구, 큐브, 삼각뿔, 정팔면체 모양 기준으로 정렬합니다."
+      },
+      {
+        id: 4,
+        title: "Phase 4: 색깔별 모양 교차 분석",
+        subtitle: "각 색깔 그룹 내부에서 모양별 개수를 센 교차 정렬입니다.",
+        desc: "RED, GREEN, BLUE 그룹 안에서 각각 구, 큐브, 삼각뿔, 정팔면체가 몇 개씩 포함되어 있는지 3x4 격자로 정렬합니다."
+      }
+    ];
+
+    let currentPhase = 1;
+    let rawObjects = [];
+    let isPopupVisible = true;
+    let selectedBallId = null;
+
+    let colorCounts = { RED: 0, GREEN: 0, BLUE: 0 };
+    let shapeCounts = { SPHERE: 0, CUBE: 0, PYRAMID: 0, OCTAHEDRON: 0 };
+    let crossCounts = {}; 
+
+    let scene, camera, renderer;
+    let ballMeshMap = new Map();
+    let glowMeshMap = new Map();
+
+    let isMouseDown = false;
+    let mouseX = 0, mouseY = 0;
+    let targetRotationX = 0, targetRotationY = 0;
+    let currentRotationX = 0, currentRotationY = 0;
+
+    function initThreeJS() {
+      const container = document.getElementById('canvas3DContainer');
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xdbe2e9); 
+      scene.fog = new THREE.FogExp2(0xdbe2e9, 0.015);
+
+      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      camera.position.set(0, 0, 26);
+
+      renderer = new THREE.WebGLRenderer({
+        canvas: document.getElementById('webglCanvas'),
+        antialias: true,
+        alpha: true
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+      scene.add(ambientLight);
+
+      const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.7);
+      dirLight1.position.set(15, 22, 15);
+      dirLight1.castShadow = true;
+      scene.add(dirLight1);
+
+      const dirLight2 = new THREE.DirectionalLight(0x94a3b8, 0.4);
+      dirLight2.position.set(-15, -10, -10);
+      scene.add(dirLight2);
+
+      container.addEventListener('mousedown', (e) => {
+        isMouseDown = true;
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      });
+
+      window.addEventListener('mouseup', () => { isMouseDown = false; });
+
+      container.addEventListener('mousemove', (e) => {
+        if (isMouseDown) {
+          const deltaX = e.clientX - mouseX;
+          const deltaY = e.clientY - mouseY;
+          targetRotationY -= deltaX * 0.005;
+          targetRotationX -= deltaY * 0.005;
+          mouseX = e.clientX;
+          mouseY = e.clientY;
+        }
+      });
+
+      window.addEventListener('resize', onWindowResize);
+      makeElementDraggable(document.getElementById('floatingVectorPopup'), document.getElementById('popupHeader'));
+
+      animate();
+    }
+
+    function makeElementDraggable(element, handle) {
+      let posX = 0, posY = 0, initialX = 0, initialY = 0;
+      handle.onmousedown = dragMouseDown;
+
+      function dragMouseDown(e) {
+        e.preventDefault();
+        initialX = e.clientX;
+        initialY = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+      }
+
+      function elementDrag(e) {
+        e.preventDefault();
+        posX = initialX - e.clientX;
+        posY = initialY - e.clientY;
+        initialX = e.clientX;
+        initialY = e.clientY;
+
+        element.style.top = (element.offsetTop - posY) + "px";
+        element.style.left = (element.offsetLeft - posX) + "px";
+        element.style.right = 'auto'; 
+      }
+
+      function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+      }
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('canvas3DContainer');
+      if (!container || !renderer) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    }
+
+    function createShapeGeometry(shapeType) {
+      switch (shapeType) {
+        case 'SPHERE':
+          return new THREE.SphereGeometry(0.75, 32, 32);
+        case 'CUBE':
+          return new THREE.BoxGeometry(1.1, 1.1, 1.1);
+        case 'PYRAMID':
+          return new THREE.ConeGeometry(0.9, 1.2, 3);
+        case 'OCTAHEDRON':
+          return new THREE.OctahedronGeometry(0.85);
+        default:
+          return new THREE.SphereGeometry(0.75, 16, 16);
+      }
+    }
+
+    function createColorMaterial(colorKey) {
+      const hex = COLORS[colorKey].rgb;
+      return new THREE.MeshStandardMaterial({
+        color: hex,
+        roughness: 0.15,
+        metalness: 0.2,
+        emissive: hex,
+        emissiveIntensity: 0.12
+      });
+    }
+
+    function generateSinglePersistentDataset() {
+      const totalCount = Math.floor(Math.random() * 15) + 22;
+
+      const colorKeys = Object.keys(COLORS);
+      const shapeKeys = Object.keys(SHAPES);
+
+      rawObjects = [];
+      let idCounter = 1;
+
+      for (let i = 0; i < totalCount; i++) {
+        const color = colorKeys[Math.floor(Math.random() * colorKeys.length)];
+        const shape = shapeKeys[Math.floor(Math.random() * shapeKeys.length)];
+
+        rawObjects.push({
+          id: idCounter++,
+          color: color,
+          shape: shape,
+          targetPos: new THREE.Vector3(0, 0, 0),
+          currentPos: new THREE.Vector3(
+            (Math.random() - 0.5) * 12,
+            (Math.random() - 0.5) * 12,
+            (Math.random() - 0.5) * 12
+          ),
+          rotationSpeed: {
+            x: (Math.random() - 0.5) * 0.02,
+            y: (Math.random() - 0.5) * 0.02
+          }
+        });
+      }
+
+      recomputeCounts();
+      rebuild3DMeshes();
+
+      document.getElementById('totalBallCountBadge').innerText = rawObjects.length;
+      document.getElementById('countRBadge').innerText = colorCounts.RED;
+      document.getElementById('countGBadge').innerText = colorCounts.GREEN;
+      document.getElementById('countBBadge').innerText = colorCounts.BLUE;
+
+      updateTargetPositions();
+      renderSceneUI();
+    }
+
+    function recomputeCounts() {
+      colorCounts = { RED: 0, GREEN: 0, BLUE: 0 };
+      shapeCounts = { SPHERE: 0, CUBE: 0, PYRAMID: 0, OCTAHEDRON: 0 };
+
+      crossCounts = {
+        RED: { SPHERE: 0, CUBE: 0, PYRAMID: 0, OCTAHEDRON: 0 },
+        GREEN: { SPHERE: 0, CUBE: 0, PYRAMID: 0, OCTAHEDRON: 0 },
+        BLUE: { SPHERE: 0, CUBE: 0, PYRAMID: 0, OCTAHEDRON: 0 }
+      };
+
+      rawObjects.forEach(obj => {
+        colorCounts[obj.color]++;
+        shapeCounts[obj.shape]++;
+        crossCounts[obj.color][obj.shape]++;
+      });
+    }
+
+    function rebuild3DMeshes() {
+      ballMeshMap.forEach(mesh => scene.remove(mesh));
+      glowMeshMap.forEach(mesh => scene.remove(mesh));
+      ballMeshMap.clear();
+      glowMeshMap.clear();
+
+      rawObjects.forEach(obj => {
+        const geom = createShapeGeometry(obj.shape);
+        const mat = createColorMaterial(obj.color);
+        const mesh = new THREE.Mesh(geom, mat);
+
+        mesh.userData = { id: obj.id, color: obj.color, shape: obj.shape };
+        mesh.position.copy(obj.currentPos);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        const glowGeom = geom.clone();
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: 0x6366f1,
+          side: THREE.BackSide,
+          wireframe: true,
+          transparent: true,
+          opacity: 0
+        });
+        const glowMesh = new THREE.Mesh(glowGeom, glowMat);
+        glowMesh.scale.set(1.25, 1.25, 1.25);
+        mesh.add(glowMesh);
+
+        scene.add(mesh);
+        ballMeshMap.set(obj.id, mesh);
+        glowMeshMap.set(obj.id, glowMesh);
+      });
+    }
+
+    function updateTargetPositions() {
+      if (currentPhase === 1) {
+        const radius = 7.5;
+        rawObjects.forEach((obj, idx) => {
+          const phi = Math.acos(-1 + (2 * idx) / rawObjects.length);
+          const theta = Math.sqrt(rawObjects.length * Math.PI) * phi;
+          obj.targetPos.set(
+            radius * Math.cos(theta) * Math.sin(phi),
+            radius * Math.sin(theta) * Math.sin(phi),
+            (radius * Math.cos(phi)) * 0.5
+          );
+        });
+      }
+      else if (currentPhase === 2) {
+        const xOffsets = { RED: -8, GREEN: 0, BLUE: 8 };
+        const counters = { RED: 0, GREEN: 0, BLUE: 0 };
+
+        rawObjects.forEach(obj => {
+          const c = obj.color;
+          const idx = counters[c]++;
+          const col = idx % 3;
+          const row = Math.floor(idx / 3);
+
+          obj.targetPos.set(
+            xOffsets[c] + (col - 1) * 1.6,
+            4 - row * 1.6,
+            0
+          );
+        });
+      }
+      else if (currentPhase === 3) {
+        const realX = { SPHERE: -9.5, CUBE: -3.2, PYRAMID: 3.2, OCTAHEDRON: 9.5 };
+        const counters = { SPHERE: 0, CUBE: 0, PYRAMID: 0, OCTAHEDRON: 0 };
+
+        rawObjects.forEach(obj => {
+          const s = obj.shape;
+          const idx = counters[s]++;
+          const col = idx % 2;
+          const row = Math.floor(idx / 2);
+
+          obj.targetPos.set(
+            realX[s] + (col - 0.5) * 1.5,
+            4.5 - row * 1.6,
+            0
+          );
+        });
+      }
+      else if (currentPhase === 4) {
+        const rowY = { RED: 4.5, GREEN: 0, BLUE: -4.5 };
+        const colX = { SPHERE: -9, CUBE: -3, PYRAMID: 3, OCTAHEDRON: 9 };
+        const cellCounters = {
+          RED: { SPHERE: 0, CUBE: 0, PYRAMID: 0, OCTAHEDRON: 0 },
+          GREEN: { SPHERE: 0, CUBE: 0, PYRAMID: 0, OCTAHEDRON: 0 },
+          BLUE: { SPHERE: 0, CUBE: 0, PYRAMID: 0, OCTAHEDRON: 0 }
+        };
+
+        rawObjects.forEach(obj => {
+          const c = obj.color;
+          const s = obj.shape;
+          const idx = cellCounters[c][s]++;
+          const offsetX = (idx % 2) * 1.2 - 0.6;
+          const offsetY = -Math.floor(idx / 2) * 1.2 + 0.6;
+
+          obj.targetPos.set(
+            colX[s] + offsetX,
+            rowY[c] + offsetY,
+            0
+          );
+        });
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      currentRotationX += (targetRotationX - currentRotationX) * 0.05;
+      currentRotationY += (targetRotationY - currentRotationY) * 0.05;
+
+      camera.position.x = 26 * Math.sin(currentRotationY) * Math.cos(currentRotationX);
+      camera.position.z = 26 * Math.cos(currentRotationY) * Math.cos(currentRotationX);
+      camera.position.y = 26 * Math.sin(currentRotationX);
+      camera.lookAt(0, 0, 0);
+
+      rawObjects.forEach(obj => {
+        const mesh = ballMeshMap.get(obj.id);
+        if (mesh) {
+          mesh.position.lerp(obj.targetPos, 0.08);
+
+          mesh.rotation.x += obj.rotationSpeed.x;
+          mesh.rotation.y += obj.rotationSpeed.y;
+
+          const isSelected = (selectedBallId === obj.id);
+
+          const glowMesh = glowMeshMap.get(obj.id);
+          if (glowMesh) {
+            if (isSelected) {
+              glowMesh.material.opacity = 0.9;
+              glowMesh.material.color.setHex(0x6366f1);
+              mesh.scale.lerp(new THREE.Vector3(1.3, 1.3, 1.3), 0.1);
+            } else {
+              glowMesh.material.opacity = 0;
+              mesh.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
+            }
+          }
+        }
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    function renderSceneUI() {
+      const popupEl = document.getElementById('floatingVectorPopup');
+      const contentEl = document.getElementById('floatingVectorContent');
+      const popupTitleEl = document.getElementById('popupTitle');
+
+      if ((currentPhase === 2 || currentPhase === 3 || currentPhase === 4) && isPopupVisible) {
+        if (currentPhase === 2) {
+          popupTitleEl.innerText = "색깔별 표현 벡터 A";
+          contentEl.innerHTML = `
+            <div class="space-y-4">
+              <div class="text-xs text-slate-600 leading-relaxed font-medium">
+                단 하나의 공 세트에 포함된 색깔별 개수를 1×3 행벡터 A로 표현합니다.
+              </div>
+
+              <!-- 1x3 Vector Representation -->
+              <div class="bg-slate-100/90 border border-slate-300/80 p-4 rounded-2xl shadow-inner">
+                <div class="text-[11px] font-bold text-slate-500 mb-2 font-sans">개수 표현 벡터 A (1 × 3)</div>
+                <div class="flex items-center justify-center gap-2 font-mono text-base text-slate-800">
+                  <span class="text-slate-600 font-bold">A =</span>
+                  <span class="text-slate-400 text-2xl font-light">[</span>
+                  <span class="px-3.5 py-1.5 bg-rose-100/80 border border-rose-300 rounded-lg text-rose-700 font-bold text-sm">${colorCounts.RED}</span>
+                  <span class="px-3.5 py-1.5 bg-emerald-100/80 border border-emerald-300 rounded-lg text-emerald-700 font-bold text-sm">${colorCounts.GREEN}</span>
+                  <span class="px-3.5 py-1.5 bg-sky-100/80 border border-sky-300 rounded-lg text-sky-700 font-bold text-sm">${colorCounts.BLUE}</span>
+                  <span class="text-slate-400 text-2xl font-light">]</span>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (currentPhase === 3) {
+          popupTitleEl.innerText = "모양별 표현 벡터 B";
+          contentEl.innerHTML = `
+            <div class="space-y-4">
+              <div class="text-xs text-slate-600 leading-relaxed font-medium">
+                동일한 공 세트를 모양별 전체 개수로 집계하여 1×4 행벡터 B로 표현합니다.
+              </div>
+
+              <!-- 1x4 Vector Representation -->
+              <div class="bg-slate-100/90 border border-slate-300/80 p-4 rounded-2xl shadow-inner">
+                <div class="text-[11px] font-bold text-slate-500 mb-2 font-sans">모양 전체 개수 벡터 B (1 × 4)</div>
+                <div class="flex items-center justify-center gap-2 font-mono text-xs text-slate-800 overflow-x-auto">
+                  <span class="text-slate-600 font-bold text-sm">B =</span>
+                  <span class="text-slate-400 text-2xl font-light">[</span>
+                  <span class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-indigo-700 font-bold text-sm">${shapeCounts.SPHERE} <span class="text-[10px] text-slate-400 font-normal">구</span></span>
+                  <span class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-indigo-700 font-bold text-sm">${shapeCounts.CUBE} <span class="text-[10px] text-slate-400 font-normal">큐브</span></span>
+                  <span class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-indigo-700 font-bold text-sm">${shapeCounts.PYRAMID} <span class="text-[10px] text-slate-400 font-normal">삼각뿔</span></span>
+                  <span class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-indigo-700 font-bold text-sm">${shapeCounts.OCTAHEDRON} <span class="text-[10px] text-slate-400 font-normal">정팔면체</span></span>
+                  <span class="text-slate-400 text-2xl font-light">]</span>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (currentPhase === 4) {
+          popupTitleEl.innerText = "유사역행렬 A⁺ 및 기여도 행렬 M";
+
+          const nR = colorCounts.RED;
+          const nG = colorCounts.GREEN;
+          const nB = colorCounts.BLUE;
+
+          const nS = shapeCounts.SPHERE;
+          const nC = shapeCounts.CUBE;
+          const nT = shapeCounts.PYRAMID;
+          const nO = shapeCounts.OCTAHEDRON;
+
+          // Norm^2 = nR^2 + nG^2 + nB^2
+          const normSq = nR * nR + nG * nG + nB * nB;
+
+          // Pseudoinverse A+ (3x1 column vector)
+          const aPlusR = (nR / normSq);
+          const aPlusG = (nG / normSq);
+          const aPlusB = (nB / normSq);
+
+          // M = A+ * B (3x4 matrix)
+          const mRS = (aPlusR * nS).toFixed(3);
+          const mRC = (aPlusR * nC).toFixed(3);
+          const mRT = (aPlusR * nT).toFixed(3);
+          const mRO = (aPlusR * nO).toFixed(3);
+
+          const mGS = (aPlusG * nS).toFixed(3);
+          const mGC = (aPlusG * nC).toFixed(3);
+          const mGT = (aPlusG * nT).toFixed(3);
+          const mGO = (aPlusG * nO).toFixed(3);
+
+          const mBS = (aPlusB * nS).toFixed(3);
+          const mBC = (aPlusB * nC).toFixed(3);
+          const mBT = (aPlusB * nT).toFixed(3);
+          const mBO = (aPlusB * nO).toFixed(3);
+
+          contentEl.innerHTML = `
+            <div class="space-y-4">
+              <!-- Equation Header Card -->
+              <div class="bg-indigo-50/90 border border-indigo-200 p-3.5 rounded-2xl text-center font-mono shadow-sm">
+                <div class="text-xs text-indigo-700 font-sans mb-1 font-semibold">관계식 AM = B 및 유사역행렬 M 도출</div>
+                <div class="text-sm text-slate-800 font-bold">
+                  <span class="text-indigo-700">A</span><sub>(1×3)</sub> · <span class="text-amber-700">M</span><sub>(3×4)</sub> = <span class="text-emerald-700">B</span><sub>(1×4)</sub>
+                  &nbsp;⇒&nbsp;
+                  <span class="text-amber-700">M</span> = <span class="text-indigo-700">A⁺</span> <span class="text-emerald-700">B</span>
+                </div>
+              </div>
+
+              <!-- Mathematical Reason & Calculation Step -->
+              <div class="bg-slate-100/90 border border-slate-300/80 p-3.5 rounded-2xl text-[11px] font-sans space-y-2 shadow-inner">
+                <div class="font-bold text-slate-700 text-xs">💡 A⁻¹ 대신 Moore–Penrose 유사역행렬 A⁺를 사용하는 이유</div>
+                <p class="text-slate-600 leading-relaxed">
+                  행렬 A = [${nR}, ${nG}, ${nB}]는 <strong>1 × 3 비정방행렬(Non-square)</strong>이므로 일반 역행렬 A⁻¹이 존재하지 않습니다.<br>
+                  따라서 우측 유사역행렬 공식 <strong class="text-indigo-700">A⁺ = Aᵀ(A Aᵀ)⁻¹</strong>을 적용합니다.
+                </p>
+
+                <div class="p-2.5 bg-white border border-slate-200 rounded-xl font-mono text-[10px] space-y-1">
+                  <div class="text-slate-500 font-bold">1) A Aᵀ 계산 (Scalar $\|A\|^2$):</div>
+                  <div class="text-slate-800">${nR}² + ${nG}² + ${nB}² = <strong>${normSq}</strong></div>
+
+                  <div class="text-slate-500 font-bold mt-1.5">2) A⁺ 계산 (3 × 1 열벡터):</div>
+                  <div class="text-indigo-700 font-semibold">
+                    A⁺ = (1 / ${normSq}) · [${nR}, ${nG}, ${nB}]ᵀ = [${aPlusR.toFixed(4)}, ${aPlusG.toFixed(4)}, ${aPlusB.toFixed(4)}]ᵀ
+                  </div>
+                </div>
+              </div>
+
+              <!-- Computed Matrix M Table -->
+              <div>
+                <div class="text-xs font-bold text-slate-700 mb-2 flex items-center justify-between">
+                  <span>M = A⁺ B (3 × 4) 계산 결과</span>
+                </div>
+                
+                <div class="bg-white border border-slate-300/80 rounded-2xl p-2.5 overflow-x-auto shadow-sm">
+                  <table class="w-full text-center font-mono text-xs border-collapse">
+                    <thead>
+                      <tr class="text-slate-500 border-b border-slate-200">
+                        <th class="p-1.5 text-left text-[11px] font-sans font-semibold">색상 \\ 모양</th>
+                        <th class="p-1.5 text-indigo-700">구 (S)</th>
+                        <th class="p-1.5 text-indigo-700">큐브 (C)</th>
+                        <th class="p-1.5 text-indigo-700">삼각뿔 (T)</th>
+                        <th class="p-1.5 text-indigo-700">정팔면체 (O)</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200/80">
+                      <tr class="hover:bg-rose-100/40 transition">
+                        <td class="p-1.5 font-bold text-rose-700 text-left font-sans">RED (a⁺<sub>R</sub>)</td>
+                        <td class="p-1.5 font-bold">${mRS}</td>
+                        <td class="p-1.5 font-bold">${mRC}</td>
+                        <td class="p-1.5 font-bold">${mRT}</td>
+                        <td class="p-1.5 font-bold">${mRO}</td>
+                      </tr>
+                      <tr class="hover:bg-emerald-100/40 transition">
+                        <td class="p-1.5 font-bold text-emerald-700 text-left font-sans">GREEN (a⁺<sub>G</sub>)</td>
+                        <td class="p-1.5 font-bold">${mGS}</td>
+                        <td class="p-1.5 font-bold">${mGC}</td>
+                        <td class="p-1.5 font-bold">${mGT}</td>
+                        <td class="p-1.5 font-bold">${mGO}</td>
+                      </tr>
+                      <tr class="hover:bg-sky-100/40 transition">
+                        <td class="p-1.5 font-bold text-sky-700 text-left font-sans">BLUE (a⁺<sub>B</sub>)</td>
+                        <td class="p-1.5 font-bold">${mBS}</td>
+                        <td class="p-1.5 font-bold">${mBC}</td>
+                        <td class="p-1.5 font-bold">${mBT}</td>
+                        <td class="p-1.5 font-bold">${mBO}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Matrix Row/Column Meaning Explanation -->
+              <div class="bg-indigo-50/80 border border-indigo-200/80 p-3 rounded-2xl text-[11px] text-slate-700 space-y-1.5 font-sans">
+                <div class="font-bold text-indigo-900">🔍 M의 행(Row)과 열(Column)이 품은 수학적 의미</div>
+                <ul class="list-disc list-inside space-y-1 text-slate-600 leading-relaxed text-[10px]">
+                  <li><strong class="text-slate-800">행(Row)</strong>: 특정 색상의 공 개수를 전체 Norm 제곱으로 나눈 유사역행렬 가중치 (a⁺<sub>Color</sub>)</li>
+                  <li><strong class="text-slate-800">열(Column)</strong>: 해당 모양(구, 큐브, 삼각뿔, 정팔면체)의 전체 개수 (N<sub>Shape</sub>)</li>
+                  <li><strong class="text-slate-800">검증 (A M = B)</strong>: A × M 을 계산하면 정확하게 B = [${nS}, ${nC}, ${nT}, ${nO}] 가 도출됩니다.</li>
+                </ul>
+              </div>
+            </div>
+          `;
+        }
+        popupEl.classList.remove('opacity-0', 'pointer-events-none');
+      } else {
+        popupEl.classList.add('opacity-0', 'pointer-events-none');
+      }
+
+      renderStepper();
+    }
+
+    function renderStepper() {
+      const container = document.getElementById('stepperContainer');
+      let html = '';
+
+      PHASES.forEach((p) => {
+        const isActive = p.id === currentPhase;
+        const isPassed = p.id < currentPhase;
+
+        let badgeClass = 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50';
+        if (isActive) badgeClass = 'bg-indigo-600 text-white font-bold border-indigo-600 shadow-md shadow-indigo-600/20';
+        else if (isPassed) badgeClass = 'bg-indigo-100/80 text-indigo-800 border-indigo-200 font-semibold';
+
+        html += `
+          <button onclick="goToPhase(${p.id})" class="px-3.5 py-1.5 rounded-xl border text-[11px] flex items-center gap-1.5 transition whitespace-nowrap ${badgeClass}">
+            <span>${p.id}.</span>
+            <span>${p.title.split(':')[1] || p.title}</span>
+          </button>
+        `;
+      });
+
+      container.innerHTML = html;
+
+      document.getElementById('btnPrevStep').disabled = (currentPhase === 1);
+      document.getElementById('btnNextStep').disabled = (currentPhase === PHASES.length);
+    }
+
+    function goToPhase(phaseNum) {
+      if (phaseNum < 1 || phaseNum > PHASES.length) return;
+      currentPhase = phaseNum;
+      updateTargetPositions();
+      renderSceneUI();
+    }
+
+    document.getElementById('btnClosePopup').addEventListener('click', () => {
+      isPopupVisible = false;
+      renderSceneUI();
+    });
+
+    document.getElementById('btnTogglePopup').addEventListener('click', () => {
+      isPopupVisible = !isPopupVisible;
+      renderSceneUI();
+    });
+
+    document.getElementById('btnNewDataset').addEventListener('click', () => {
+      generateSinglePersistentDataset();
+    });
+
+    document.getElementById('btnPrevStep').addEventListener('click', () => {
+      goToPhase(currentPhase - 1);
+    });
+
+    document.getElementById('btnNextStep').addEventListener('click', () => {
+      goToPhase(currentPhase + 1);
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') goToPhase(currentPhase + 1);
+      if (e.key === 'ArrowLeft') goToPhase(currentPhase - 1);
+    });
+
+    window.onload = () => {
+      initThreeJS();
+      generateSinglePersistentDataset();
+    };
+  </script>
+</body>
+</html>
